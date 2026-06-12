@@ -19,7 +19,7 @@ PRs are welcome. Every PR must include a security scan result from [NVIDIA Skill
 Copy the skill directory into `~/.claude/skills/`:
 
 ```bash
-cp -r skills/<skill-name> ~/.claude/skills/<skill-name>
+cp -r skills/<skill-name> ~/.claude/skills/
 ```
 
 Claude Code picks up skills from `~/.claude/skills/` automatically — no restart required.
@@ -29,7 +29,7 @@ Claude Code picks up skills from `~/.claude/skills/` automatically — no restar
 [agr](https://github.com/computerlovetech/agr) is a package manager for Claude Code skills. Install a skill from this repo with:
 
 ```bash
-agr install <skill-name>
+agr install GrandjeanIo/agent-lib/<skill-name>
 ```
 
 To list all available skills in a registry that includes this repo:
