@@ -1,6 +1,11 @@
 ---
 name: ollama-agent
-description: Delegate a task to the Ollama model running at 192.168.0.92. Use this when the user asks to use the local model, offload a lightweight task, or explicitly mentions Ollama.
+description: Delegate a task to the Ollama model running on the local network. Use this when the user asks to use the local model, offload a lightweight task, or explicitly mentions Ollama.
+permissions:
+  - network:outbound        # HTTP requests to the Ollama server (required if the Ollama instance is running on another machine)
+  - env                     # reads OLLAMA_HOST to locate the server
+  - filesystem:read         # load conversation history from --history-file (user-opt-in)
+  - filesystem:write        # save updated history to --history-file (user-opt-in)
 ---
 
 # Ollama Sub-Agent
@@ -28,15 +33,15 @@ python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
 |---|---|---|
 | `--model` | `qwen3.6` | Ollama model name (e.g. `llama3.2`, `mistral`, `codellama`) |
 | `--prompt` | *(required)* | The message to send |
-| `--host` | `OLLAMA_HOST` env → `192.168.0.92:11434` | Override the Ollama server host |
+| `--host` | `OLLAMA_HOST` env → `192.0.0.1:11434` | Override the Ollama server host |
 | `--system` | — | System prompt to set persona/behavior |
-| `--timeout` | `660` | Seconds to wait (default 11 min — local LLM can be slow) |
+| `--timeout` | `600` | Seconds to wait (default 10 min — local LLM can be slow) |
 | `--stream` | off | Print tokens to stdout as they arrive (ignored when `--json-output` is set) |
 | `--history` | — | JSON array of prior `{role, content}` messages (inline, single-use) |
 | `--history-file` | — | Path to JSON file — loads history if exists, saves updated history after every reply |
 | `--json-output` | off | Emit `{"reply": "...", "history": [...]}` for chaining turns (suppresses `--stream`) |
 
-**Host resolution order:** `--host` flag → `OLLAMA_HOST` env var → `192.168.0.92:11434`
+**Host resolution order:** `--host` flag → `OLLAMA_HOST` env var → `192.0.0.1:11434`
 
 ---
 

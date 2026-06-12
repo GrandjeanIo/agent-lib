@@ -15,7 +15,7 @@ parser.add_argument("--system", default="", help="Optional system prompt")
 parser.add_argument(
     "--host",
     default="",
-    help="Ollama host (overrides OLLAMA_HOST env var, default: 192.168.0.92:11434)",
+    help="Ollama host (overrides OLLAMA_HOST env var, default: 192.0.0.1:11434)",
 )
 parser.add_argument(
     "--history",
@@ -41,11 +41,11 @@ parser.add_argument(
     "--timeout",
     type=int,
     default=660,
-    help="Request timeout in seconds (default: 660 / 11 min)",
+    help="Request timeout in seconds (default: 600 / 10 min)",
 )
 args = parser.parse_args()
 
-host = args.host or os.environ.get("OLLAMA_HOST", "192.168.0.92:11434")
+host = args.host or os.environ.get("OLLAMA_HOST", "192.0.0.1:11434")
 OLLAMA_URL = f"http://{host}/v1/chat/completions"
 
 # --json-output suppresses streaming so sub-agents can parse clean JSON
