@@ -4,8 +4,6 @@ description: Delegate a task to the Ollama model running on the local network. U
 permissions:
   - network:outbound        # HTTP requests to the Ollama server (required if the Ollama instance is running on another machine)
   - env                     # reads OLLAMA_HOST to locate the server
-  - filesystem:read         # load conversation history from --history-file (user-opt-in)
-  - filesystem:write        # save updated history to --history-file (user-opt-in)
 ---
 
 # Ollama Sub-Agent
@@ -14,8 +12,10 @@ permissions:
 
 ## Invocation (inside the sub-agent)
 
+**Locating the script:** This skill's script is always at `scripts/ollama-agent.py` relative to this `SKILL.md` file. When loading this skill, take the path you read this file from, strip the filename, and use that directory as `<skill-root>`. Pass the resolved absolute path to the sub-agent so it doesn't need to search.
+
 ```bash
-python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
+python3 <skill-root>/scripts/ollama-agent.py \
   --model <model> \
   --prompt "<prompt>" \
   [--host <host>] \
@@ -23,7 +23,6 @@ python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
   [--timeout <seconds>] \
   [--stream] \
   [--history '<json array>'] \
-  [--history-file <path>] \
   [--json-output]
 ```
 
@@ -37,8 +36,7 @@ python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
 | `--system` | — | System prompt to set persona/behavior |
 | `--timeout` | `600` | Seconds to wait (default 10 min — local LLM can be slow) |
 | `--stream` | off | Print tokens to stdout as they arrive (ignored when `--json-output` is set) |
-| `--history` | — | JSON array of prior `{role, content}` messages (inline, single-use) |
-| `--history-file` | — | Path to JSON file — loads history if exists, saves updated history after every reply |
+| `--history` | — | JSON array of prior `{role, content}` messages (inline) |
 | `--json-output` | off | Emit `{"reply": "...", "history": [...]}` for chaining turns (suppresses `--stream`) |
 
 **Host resolution order:** `--host` flag → `OLLAMA_HOST` env var → `192.0.0.1:11434`
@@ -49,41 +47,28 @@ python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
 
 ### Single-turn with streaming
 ```bash
-python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
+python3 <skill-root>/scripts/ollama-agent.py \
   --stream \
   --prompt "Explain event loops in JavaScript."
 ```
 
 ### Single-turn with system prompt
 ```bash
-python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
+python3 <skill-root>/scripts/ollama-agent.py \
   --system "You are a concise code reviewer. Reply with bullet points only." \
   --prompt "Review this function for obvious bugs: def add(a, b): return a - b"
 ```
 
-### Multi-turn using a history file (recommended for persistent sessions)
-```bash
-# Turn 1 — file is created automatically
-python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
-  --history-file /tmp/my-session.json \
-  --prompt "What is dependency injection?"
-
-# Turn 2 — file is loaded; model remembers the prior exchange
-python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
-  --history-file /tmp/my-session.json \
-  --prompt "Show me a simple Python example."
-```
-
-### Multi-turn using inline JSON (for single-agent chaining)
+### Multi-turn using inline JSON
 ```bash
 # Turn 1
-TURN1=$(python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
+TURN1=$(python3 <skill-root>/scripts/ollama-agent.py \
   --json-output --prompt "What is dependency injection?")
 
 HISTORY=$(echo "$TURN1" | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)['history']))")
 
 # Turn 2 — pass history forward
-python3 ~/.claude/skills/ollama-agent/scripts/ollama-agent.py \
+python3 <skill-root>/scripts/ollama-agent.py \
   --history "$HISTORY" \
   --prompt "Show me a simple Python example."
 ```

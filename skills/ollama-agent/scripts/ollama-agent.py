@@ -23,11 +23,6 @@ parser.add_argument(
     help="JSON array of prior messages [{role, content}] for multi-turn conversations",
 )
 parser.add_argument(
-    "--history-file",
-    default="",
-    help="Path to a JSON file for persistent conversation history (loads if exists, saves after every reply)",
-)
-parser.add_argument(
     "--json-output",
     action="store_true",
     help="Output {reply, history} JSON — suppresses streaming tokens, for chaining turns",
@@ -55,16 +50,7 @@ messages = []
 if args.system:
     messages.append({"role": "system", "content": args.system})
 
-# --history-file takes priority over --history
-if args.history_file:
-    if os.path.exists(args.history_file):
-        try:
-            with open(args.history_file) as f:
-                messages.extend(json.load(f))
-        except (json.JSONDecodeError, OSError) as e:
-            print(f"ERROR: Could not load --history-file: {e}", file=sys.stderr)
-            sys.exit(1)
-elif args.history:
+if args.history:
     try:
         messages.extend(json.loads(args.history))
     except json.JSONDecodeError as e:
@@ -100,15 +86,6 @@ try:
         else:
             data = json.loads(resp.read())
             reply = data["choices"][0]["message"]["content"]
-
-        # Persist history to file if requested
-        if args.history_file:
-            messages.append({"role": "assistant", "content": reply})
-            try:
-                with open(args.history_file, "w") as f:
-                    json.dump(messages, f, indent=2)
-            except OSError as e:
-                print(f"ERROR: Could not save --history-file: {e}", file=sys.stderr)
 
         if args.json_output:
             history_out = messages if messages[-1]["role"] == "assistant" else messages + [{"role": "assistant", "content": reply}]
