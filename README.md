@@ -19,7 +19,7 @@ PRs are welcome. Every PR must include a security scan result from [NVIDIA Skill
 Copy the skill directory into `~/.claude/skills/`:
 
 ```bash
-cp -r skills/<skill-name> ~/.claude/skills/
+cp -r skills/<skill-name> ~/.claude/skills/<skill-name>
 ```
 
 Claude Code picks up skills from `~/.claude/skills/` automatically — no restart required.
