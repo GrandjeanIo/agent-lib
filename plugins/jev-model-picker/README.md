@@ -14,13 +14,16 @@ first prompt (or first after /clear) ──► JEV prompt-router (haiku | sonnet
                                                                                        status line: "jev → sonnet"
 ```
 
-The pick writes the `/config` model row and applies to that first turn. The transcript gets a
-line with the result, so you see the pick before the cache grows and can still `/model` up cheaply:
+The pick writes the `/config` model row and applies to that first turn. The first turn needs a full
+model id, and the mod knows only the first-party Claude 5.5 ids. On another provider (Bedrock,
+Vertex, a gateway) or a newer release, the first turn keeps the model it had and the pick applies
+from your next prompt. The transcript gets a line with the result, so you see the pick before the
+cache grows and can still `/model` up cheaply:
 
 ```
 jev → haiku (0.97), was sonnet · /model to change
 jev → sonnet (haiku 0.82 is under the 0.90 bar) · /model to change
-jev → sonnet (0.75, confirm: <JEV's reason>) · /model to change
+jev → sonnet (0.60, confirm: <JEV's reason>) · /model to change
 jev → opus (0.10, escalate: <JEV's reason>) · /model to change
 ```
 
@@ -67,9 +70,10 @@ claude plugin validate .                     # marketplace + manifest + module
 claude plugin test plugins/jev-model-picker
 ```
 
-`npx tsc --noEmit` type-checks against `.claude-plugin/types/`. That folder is gitignored and
-written locally by Claude Code, so a fresh clone fails with TS5083 until it exists. `validate` and
-`test` don't need it. The repo has no TypeScript dependency; the check passes on TypeScript 7 (5.4 rejects the generated config's `--target`).
+`npx -p typescript@7.0.2 tsc --noEmit` type-checks against `.claude-plugin/types/`. That folder is
+gitignored and written locally by Claude Code, so a fresh clone fails with TS5083 until it exists.
+`validate` and `test` don't need it. The repo has no TypeScript dependency, so the command pins the
+version (5.4 rejects the generated config's `--target`).
 
 `hooks/jev/` is the JEV decision model. It is first-party code in this repo, edited here like the rest
 of the plugin. Tune the decision in `hooks/register.ts` with `.tune({...})`.
@@ -107,11 +111,11 @@ not shipped, so it is not used as the result.
 
 | Result | Value |
 |---|---|
-| Risk score | 12/100 |
+| Risk score | 5/100 |
 | Severity | LOW |
 | Recommendation | CAUTION |
-| Issues | 2 MEDIUM: `RP1` (`npx tsc` cited without a pinned version, in this README's Develop section) and `E1` (external transmission, the intended "Data and privacy" disclosure) |
-| Coverage | 94.1%: 16 of 17 files fully inspected, 1 partial |
+| Issues | 1 MEDIUM: `E1` (external transmission, the intended "Data and privacy" disclosure) |
+| Coverage | 93.3%: 14 of 15 files fully inspected, 1 partial |
 | Degraded analyzers | `bundled_execution_surface` |
 
 **The scan is not complete.** The one partial file is `hooks/hooks.json`. The analyzer reports its
@@ -121,5 +125,5 @@ complete when it is scanned alone. The format is required by the plugin harness,
 The degraded analyzer is for the same file. Treat the result as a near-complete review, not a clean
 bill of health.
 
-The remaining `E1` finding flags the "Data and privacy" section's description of the transmission,
-which is intended.
+The `E1` finding flags the "Data and privacy" section's description of the transmission, which is
+intended.

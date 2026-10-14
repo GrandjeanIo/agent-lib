@@ -8,12 +8,15 @@ import { promptRouter } from './jev/presets/claude-code.ts'
 // 10s budget counts this wait too, so it has to fire well inside it.
 const JEV_WAIT_MS = 5000
 
-// The request names a full model id; the /config row keeps the alias.
+// The request names a full model id; the /config row keeps the alias. The mod API can't resolve
+// an alias, so these are first-party ids of one release. A step that names any other id (Bedrock,
+// Vertex, a gateway, a newer release) is left alone: the /config switch applies from the next prompt.
 const MODEL_IDS: Record<string, string> = {
   haiku: 'claude-haiku-5-5',
   sonnet: 'claude-sonnet-5-5',
   opus: 'claude-opus-5-5',
 }
+const KNOWN_IDS = new Set(Object.values(MODEL_IDS))
 
 // The work's answer, or undefined once the wait ends first. The loser's promise is left to settle.
 async function within<T>(work: Promise<T>, wait: (signal: AbortSignal) => Promise<void>): Promise<T | undefined> {
@@ -139,7 +142,7 @@ export const register: Register = (on, options) => {
   on('turn.step', async function* ($, e, next) {
     if (e.agentId) return yield* next(e)
     if (pending && e.index === 0) firstTurn = e.turnId
-    if (e.turnId !== firstTurn || !pending) return yield* next(e)
+    if (e.turnId !== firstTurn || !pending || !KNOWN_IDS.has(e.model)) return yield* next(e)
     return yield* next({ ...e, model: pending })
   })
 

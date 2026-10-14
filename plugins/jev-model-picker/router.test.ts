@@ -223,6 +223,24 @@ test('the first turn after the pick names the picked model, not the one from bef
   expect(names).toEqual(['claude-haiku-5-5'])
 })
 
+test('a model id the mod does not know (another provider, a newer release): the first turn keeps it', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set } = session(on, 0)
+  const names: string[] = []
+  on('turn.step', async function* (_$, e) {
+    names.push(e.model)
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
+  })
+
+  await $.prompt.submit(submit('rename foo to bar'))
+  const bedrock = 'us.anthropic.claude-sonnet-5-5-v1:0'
+  for await (const _ of $.turn.step({ turnId: 'turn-1', index: 0, model: bedrock, messageCount: 1 })) void _
+
+  expect(set).toEqual(['haiku'])
+  expect(names).toEqual([bedrock])
+})
+
 test('an interrupted first turn does not hand its pick to the next turn', async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
   jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
