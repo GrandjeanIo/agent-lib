@@ -8,6 +8,13 @@ import { promptRouter } from './jev/presets/claude-code.ts'
 // 10s budget counts this wait too, so it has to fire well inside it.
 const JEV_WAIT_MS = 5000
 
+// The request names a full model id; the /config row keeps the alias.
+const MODEL_IDS: Record<string, string> = {
+  haiku: 'claude-haiku-5-5',
+  sonnet: 'claude-sonnet-5-5',
+  opus: 'claude-opus-5-5',
+}
+
 // The work's answer, or undefined once the wait ends first. The loser's promise is left to settle.
 async function within<T>(work: Promise<T>, wait: (signal: AbortSignal) => Promise<void>): Promise<T | undefined> {
   const stop = new AbortController()
@@ -113,7 +120,7 @@ export const register: Register = (on, options) => {
       return next(e)
     }
     // session.model() still reports the model from before this switch, so the first turn names the pick directly.
-    pending = model
+    pending = MODEL_IDS[model]
 
     // The transcript line stays put, so the switch is visible before the cache grows and
     // /model is still cheap; the toast is the moment it happens.

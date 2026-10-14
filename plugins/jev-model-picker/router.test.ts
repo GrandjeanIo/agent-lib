@@ -220,7 +220,7 @@ test('the first turn after the pick names the picked model, not the one from bef
   await $.prompt.submit(submit('rename foo to bar'))
   for await (const _ of $.turn.step({ turnId: 'turn-1', index: 0, model: 'claude-sonnet-5-5', messageCount: 1 })) void _
 
-  expect(names).toEqual(['haiku'])
+  expect(names).toEqual(['claude-haiku-5-5'])
 })
 
 test('an interrupted first turn does not hand its pick to the next turn', async ($, on) => {
