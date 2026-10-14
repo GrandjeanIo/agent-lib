@@ -13,8 +13,6 @@ export type JevClientOptions = {
   baseUrl?: string
   /** Retries on 429 / 5xx / network errors. Default 2. */
   maxRetries?: number
-  /** Per-attempt timeout. Default 10s. Ignored where no setTimeout exists. */
-  timeoutMs?: number
 }
 
 export class JevError extends Error {
@@ -61,10 +59,7 @@ export class JevClient {
   }
 
   private async attempt(url: string, headers: Record<string, string>, body: string): Promise<SystemOneResponse> {
-    const res = await withTimeout(
-      this.options.transport(url, { method: 'POST', headers, body }),
-      this.options.timeoutMs ?? 10_000,
-    )
+    const res = await this.options.transport(url, { method: 'POST', headers, body })
     if (!res.ok) {
       const retryable = res.status === 429 || res.status >= 500
       throw new JevError(`Jev returned ${res.status}`, { status: res.status, body: res.text, retryable })
@@ -88,7 +83,6 @@ export type FetchLike = (
 const host = globalThis as {
   fetch?: FetchLike
   setTimeout?: (fn: () => void, ms: number) => unknown
-  clearTimeout?: (timer: unknown) => void
 }
 
 /** Adapts the standard `fetch` (Node, Bun, browsers) to a Transport. */
@@ -103,16 +97,4 @@ export function fetchTransport(fetchImpl: FetchLike | undefined = host.fetch): T
 function sleep(ms: number): Promise<void> {
   if (typeof host.setTimeout !== 'function') return Promise.resolve()
   return new Promise(resolve => host.setTimeout?.(resolve, ms))
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  if (typeof host.setTimeout !== 'function') return promise
-  let timer: unknown
-  const timeout = new Promise<never>((_, reject) => {
-    timer = host.setTimeout?.(
-      () => reject(new JevError(`Jev did not answer within ${ms}ms`, { retryable: true })),
-      ms,
-    )
-  })
-  return Promise.race([promise, timeout]).finally(() => host.clearTimeout?.(timer))
 }
