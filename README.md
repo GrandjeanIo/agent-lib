@@ -11,6 +11,7 @@ PRs are welcome. Every PR must include a security scan result from [NVIDIA Skill
 | Plugin | Description | Status
 |---|---|---|
 | [jev-model-picker](plugins/jev-model-picker/) | My name is Jev. I pick your model once, at session start and after /clear. No prompts, no mid-session switches, cache stays warm. | POC
+| [feature-factory](plugins/feature-factory/) | Intent-to-merge agent pipeline: scope work into Linear tickets with a person, then two `/loop` dispatchers build each ticket test-first and review it under a second GitHub account. | POC
 
 **Privacy:** `jev-model-picker` sends the first prompt of each new session to a third-party API (TypeSafe) by default when a TypeSafe key is configured. See [Data and privacy](plugins/jev-model-picker/README.md#data-and-privacy).
 
@@ -23,4 +24,5 @@ Add this repo as a marketplace once, then install what you need:
 ```
 /plugin marketplace add GrandjeanIo/agent-lib
 /plugin install jev-model-picker@agent-lib
+/plugin install feature-factory@agent-lib
 ```
