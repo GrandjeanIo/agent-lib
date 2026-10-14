@@ -4,7 +4,8 @@ A Claude Code mod that lets JEV pick the model once per context: at session star
 `/clear`. Mid-session prompts never change the model, so the cache stays warm.
 
 - **Session start:** the pick runs on your first prompt of a new session. The mod needs the prompt
-  text to classify it, so nothing is picked before you type.
+  text to classify it, so nothing is picked before you type. A resumed session (`--resume`,
+  `--continue`) already has turns, so it keeps the model it had.
 - **After `/clear`:** the next prompt you submit is picked again, as a fresh context.
 - **Every other prompt:** the model is left alone.
 
@@ -25,7 +26,8 @@ jev → opus (0.10, escalate: <JEV's reason>) for this session · /model to chan
 
 - **act**: JEV is sure. The line shows its confidence.
 - **confirm**: the line adds JEV's reason.
-- **escalate** (JEV is unsure or unreachable): the preset's fallback, `opus`, plus the reason.
+- **escalate** (JEV is unsure, unreachable, or silent for 5 seconds): the preset's fallback, `opus`,
+  plus the reason.
 - **Haiku has a higher bar.** A wrong downgrade costs more than a wrong upgrade, so Haiku needs
   confidence ≥ `haikuConfidence` (default 0.9). Below that the session gets Sonnet.
 
@@ -66,7 +68,7 @@ claude plugin test plugins/jev-model-picker
 
 `npx tsc --noEmit` type-checks against `.claude-plugin/types/`. That folder is gitignored and
 written locally by Claude Code, so a fresh clone fails with TS5083 until it exists. `validate` and
-`test` don't need it. The repo has no TypeScript dependency; use TypeScript 5.4 or newer.
+`test` don't need it. The repo has no TypeScript dependency; the check passes on TypeScript 7 (5.4 rejects the generated config's `--target`).
 
 `hooks/jev/` is the JEV decision model. It is first-party code in this repo, edited here like the rest
 of the plugin. Tune the decision in `hooks/register.ts` with `.tune({...})`.

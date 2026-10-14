@@ -4,10 +4,32 @@ import type { Register } from 'claude-code'
 import { clientFromEnv, createDecisionModel } from './jev/core/index.ts'
 import { promptRouter } from './jev/presets/claude-code.ts'
 
+// The hook sandbox has no timers, so a hung Jev is bounded by the clock instead. The hook's
+// 10s budget counts this wait too, so it has to fire well inside it.
+const JEV_WAIT_MS = 5000
+
+// The work's answer, or undefined once the wait ends first. The loser's promise is left to settle.
+async function within<T>(work: Promise<T>, wait: (signal: AbortSignal) => Promise<void>): Promise<T | undefined> {
+  const stop = new AbortController()
+  // An aborted wait rejects, and must not count as the clock running out.
+  const late = wait(stop.signal).then(
+    () => ({ late: true as const }),
+    () => new Promise<never>(() => {}),
+  )
+  work.catch(() => undefined)
+  try {
+    const got = await Promise.race([work.then(value => ({ value })), late])
+    return 'late' in got ? undefined : got.value
+  } finally {
+    stop.abort()
+  }
+}
+
 export const register: Register = (on, options) => {
   const apiKey = typeof options.apiKey === 'string' ? options.apiKey.trim() : ''
   const allowHaiku = options.allowHaiku !== false
-  // A bar outside 0..1 (or NaN) can't be met or is meaningless, so clamp it, and fall back to the default when it isn't a number at all.
+  // A bar outside 0..1 (or NaN) can't be met or is meaningless, so clamp it.
+  // A bar that isn't a number at all falls back to the default.
   const haikuBar =
     typeof options.haikuConfidence === 'number' && Number.isFinite(options.haikuConfidence)
       ? Math.min(1, Math.max(0, options.haikuConfidence))
@@ -51,8 +73,14 @@ export const register: Register = (on, options) => {
     const router = createDecisionModel(promptRouter, { client }).tune({
       decisions: { subagent: { enabled: false }, ...(allowHaiku ? {} : { model: { criteria: upTiers } }) },
     })
-    const r = await router.decide(e.text)
-    const { value, confidence, band, reason } = r.decisions.model
+    // A Jev that doesn't answer in time is the same as an unreachable one: escalate to the fallback.
+    const answer = await within(router.decide(e.text), signal => $.clock.sleep(JEV_WAIT_MS, { signal }))
+    const { value, confidence, band, reason } = answer?.decisions.model ?? {
+      value: promptRouter.decisions.model.fallback,
+      confidence: 0,
+      band: 'escalate',
+      reason: `Jev did not answer within ${JEV_WAIT_MS / 1000}s`,
+    }
     if (!value) return next(e)
 
     // A wrong downgrade costs more than a wrong upgrade: Haiku needs its own, higher bar.
@@ -70,7 +98,8 @@ export const register: Register = (on, options) => {
       $.ui.log(`jev: wanted ${model} (${why}), but ${set.deny}`)
       return next(e)
     }
-    pending = await $.session.model()
+    // session.model() still reports the model from before this switch, so the first turn names the pick directly.
+    pending = model
 
     // The transcript line stays put, so the switch is visible before the cache grows and
     // /model is still cheap; the toast is the moment it happens.
@@ -79,6 +108,10 @@ export const register: Register = (on, options) => {
     $.ui.log(`jev → ${model} (${why}) for this session${was} · /model to change`)
     $.ui.toast(`jev → ${model} (${why})${was}`, { timeoutMs: 6000 })
     $.ui.status(`jev → ${model}`)
+    return next(e)
+  }).catch(($, e, next) => {
+    // Throws and budget overruns both land here. Without this the prompt goes through with no log line.
+    $.ui.log('jev: routing failed, model unchanged')
     return next(e)
   })
 

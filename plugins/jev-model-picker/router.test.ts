@@ -174,3 +174,50 @@ test('API key from the plugin option: no env needed, sent as the bearer token', 
   expect(sent.map(r => r.authorization)).toEqual(['Bearer from-option'])
   expect(set).toEqual(['haiku'])
 })
+
+test('Jev hangs: the clock ends the wait and the fallback applies, with the reason', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const clock = mock.clock(on)
+  on('http.fetch', () => new Promise(() => {}))
+  const { set, lines } = session(on, 0)
+
+  const done = $.prompt.submit(submit('rename foo to bar'))
+  await clock.settle()
+  await clock.advance(5000)
+  await done
+
+  expect(set).toEqual(['opus'])
+  expect(lines[0]).toBe('jev → opus (0.00, escalate: Jev did not answer within 5s) for this session, was sonnet · /model to change')
+})
+
+test('a throw in the routing: the prompt goes through, model unchanged, and it says so', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const lines: string[] = []
+  on('session.turns', async () => ({ value: 0 }))
+  on('config.list', async () => {
+    throw new Error('config gone')
+  })
+  on('ui.log', async (_$, e) => (lines.push(e.text), { value: undefined }))
+  on('prompt.submit', async (_$, e) => ({ text: e.text }) as never)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(lines).toEqual(['jev: routing failed, model unchanged'])
+})
+
+test('the first turn after the pick names the picked model, not the one from before the switch', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  session(on, 0)
+  const names: string[] = []
+  on('turn.step', async function* (_$, e) {
+    names.push(e.model)
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
+  })
+
+  await $.prompt.submit(submit('rename foo to bar'))
+  for await (const _ of $.turn.step({ turnId: 'turn-1', index: 0, model: 'claude-sonnet-5-5', messageCount: 1 })) void _
+
+  expect(names).toEqual(['haiku'])
+})

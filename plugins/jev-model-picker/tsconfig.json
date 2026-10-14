@@ -3,5 +3,5 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true
   },
-  "include": ["hooks", "types", "tests", "*.test.ts"]
+  "include": ["hooks", "*.test.ts"]
 }
