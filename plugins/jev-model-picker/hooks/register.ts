@@ -7,7 +7,11 @@ import { promptRouter } from './jev/presets/claude-code.ts'
 export const register: Register = (on, options) => {
   const apiKey = typeof options.apiKey === 'string' ? options.apiKey.trim() : ''
   const allowHaiku = options.allowHaiku !== false
-  const haikuBar = typeof options.haikuConfidence === 'number' ? options.haikuConfidence : 0.9
+  // A bar outside 0..1 (or NaN) can't be met or is meaningless, so clamp it, and fall back to the default when it isn't a number at all.
+  const haikuBar =
+    typeof options.haikuConfidence === 'number' && Number.isFinite(options.haikuConfidence)
+      ? Math.min(1, Math.max(0, options.haikuConfidence))
+      : 0.9
 
   // The turn has already resolved its model when the prompt is submitted, so the /config
   // switch only lands from the next prompt on. The first turn's requests are rewritten here.

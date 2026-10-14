@@ -18,6 +18,6 @@
     }
   ],
   "metadata": {
-    "description": "Agent tools and Claude Code plugins: a model router mod and the ollama-agent skill"
+    "description": "Agent tools and Claude Code plugins: the jev-model-picker plugin and the ollama-agent skill"
   }
 }
