@@ -66,9 +66,9 @@ folder). The same for every repo. Nothing project-specific goes here.
 | File | Role |
 | --- | --- |
 | `docs/pipeline.md` | This file. Entry point and map. |
-| `skills/next-ticket/SKILL.md` | Dispatcher, implementation loop |
-| `skills/next-pr/SKILL.md` | Dispatcher, review loop |
-| `skills/tdd-implement/SKILL.md` | Test-first implementation, called by `task-implementer` |
+| `skills/next-ticket` | Dispatcher, implementation loop |
+| `skills/next-pr` | Dispatcher, review loop |
+| `skills/tdd-implement` | Test-first implementation, called by `task-implementer` |
 | `skills/to-intent`, `to-plan`, `to-ticket` | Human-in-the-loop scoping steps 1 to 3 |
 | `agents/task-implementer.md` | Worker: ticket or fix → PR. Defines the concurrency model. |
 | `agents/pr-reviewer.md` | Worker: PR → merge, changes or escalation |

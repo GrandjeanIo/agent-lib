@@ -93,10 +93,10 @@ provider (the LLM analyzers completed). The scan covered the shipped files only:
 
 | Result | Value |
 |---|---|
-| Risk score | 23/100 |
-| Severity | MEDIUM |
+| Risk score | 9/100 |
+| Severity | LOW |
 | Recommendation | CAUTION |
-| Issues | 4 MEDIUM: `AS3` ×3, `BH1` |
+| Issues | 1 MEDIUM: `BH1` (the bundled hook) |
 | Coverage | 94.7%: 18 of 19 files fully inspected, 1 partial |
 | Degraded analyzers | `bundled_execution_surface` |
 
@@ -104,10 +104,8 @@ provider (the LLM analyzers completed). The scan covered the shipped files only:
 `jev-model-picker`: the analyzer does not model the plugin hook format. The degraded analyzer is for
 the same file.
 
-The findings, each checked by hand:
+The finding, checked by hand:
 
-- **`AS3` (MEDIUM) ×3, skill enumeration**, `docs/pipeline.md:69-71`. The file map lists the
-  plugin's own `SKILL.md` files. Nothing reads another plugin's skills.
 - **`BH1` (MEDIUM), bundled hook**, `hooks/hooks.json`. The SessionStart hook runs
   `hooks/session-start.sh`. The script only checks whether `docs/agents/project.md` exists and
   prints a fixed three-line pointer. It reads no other file and makes no network call.
