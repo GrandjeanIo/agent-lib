@@ -18,7 +18,8 @@ function jev(on: On, tiers: Record<string, number>) {
 // A session that has seen `turns` prompts, with a /config model row that records what it was set to.
 function session(on: On, turns: number, current = 'sonnet') {
   const set: unknown[] = []
-  on('session.turns', async () => ({ value: turns }))
+  const state = { turns }
+  on('session.turns', async () => ({ value: state.turns }))
   on('session.model', async () => ({ value: 'claude-haiku-5-5' }))
   on('config.list', async () => ({
     value: [{ key: 'model', label: 'Model', kind: 'choice', value: current, provider: { plugin: 'engine', tier: 'core' } }] as never,
@@ -30,7 +31,7 @@ function session(on: On, turns: number, current = 'sonnet') {
   const toasts: string[] = []
   on('ui.toast', async (_$, e) => (toasts.push(e.text), { value: undefined }))
   on('prompt.submit', async (_$, e) => ({ text: e.text }) as never)
-  return { set, lines, toasts }
+  return { set, lines, toasts, state }
 }
 
 const submit = (text: string) => ({ text, wait: false }) as never
@@ -43,9 +44,9 @@ test('first prompt of a fresh context: jev picks the tier and the session model 
   await $.prompt.submit(submit('rename foo to bar in utils.ts'))
 
   expect(sent.length).toBe(1)
-  expect(Object.keys(sent[0]!.questions).sort()).toEqual(['model', 'size'])
+  expect(Object.keys(sent[0]!.questions)).toEqual(['model'])
   expect(set).toEqual(['haiku'])
-  expect(lines).toEqual(['jev → haiku (0.97) for this session, was sonnet · /model to change'])
+  expect(lines).toEqual(['jev → haiku (0.97), was sonnet · /model to change'])
   expect(toasts).toEqual(['jev → haiku (0.97), was sonnet'])
 })
 
@@ -68,7 +69,7 @@ test('Jev unsure: falls back to opus and says why', async ($, on) => {
   await $.prompt.submit(submit('make it better'))
 
   expect(set).toEqual(['opus'])
-  expect(lines[0]).toMatch(/^jev → opus \(0\.10, escalate: .*\) for this session, was sonnet/)
+  expect(lines[0]).toMatch(/^jev → opus \(0\.10, escalate: .*\), was sonnet/)
 })
 
 test('Jev unreachable: falls back to opus and says why', async ($, on) => {
@@ -81,7 +82,7 @@ test('Jev unreachable: falls back to opus and says why', async ($, on) => {
   await $.prompt.submit(submit('rename foo to bar'))
 
   expect(set).toEqual(['opus'])
-  expect(lines[0]).toMatch(/^jev → opus \(0\.00, escalate: Jev unavailable: .+\) for this session, was sonnet/)
+  expect(lines[0]).toMatch(/^jev → opus \(0\.00, escalate: Jev unavailable: .+\), was sonnet/)
 })
 
 test('Jev answers HTTP 500: falls back to opus and says why', async ($, on) => {
@@ -92,7 +93,7 @@ test('Jev answers HTTP 500: falls back to opus and says why', async ($, on) => {
   await $.prompt.submit(submit('rename foo to bar'))
 
   expect(set).toEqual(['opus'])
-  expect(lines[0]).toMatch(/^jev → opus \(0\.00, escalate: Jev unavailable: Jev returned 500\) for this session, was sonnet/)
+  expect(lines[0]).toMatch(/^jev → opus \(0\.00, escalate: Jev unavailable: Jev returned 500\), was sonnet/)
 })
 
 test('no key in the environment: says so plainly, no Jev call, model left alone', async ($, on) => {
@@ -128,7 +129,7 @@ test('already on the right model: still says so', async ($, on) => {
 
   await $.prompt.submit(submit('rename foo to bar'))
 
-  expect(lines).toEqual(['jev → haiku (0.97) for this session · /model to change'])
+  expect(lines).toEqual(['jev → haiku (0.97) · /model to change'])
 })
 
 test('haiku under its higher bar: steps up to sonnet, not all the way to opus', async ($, on) => {
@@ -140,7 +141,7 @@ test('haiku under its higher bar: steps up to sonnet, not all the way to opus', 
   await $.prompt.submit(submit('rename foo to bar'))
 
   expect(set).toEqual(['sonnet'])
-  expect(lines[0]).toBe('jev → sonnet (haiku 0.82 is under the 0.90 bar) for this session · /model to change')
+  expect(lines[0]).toBe('jev → sonnet (haiku 0.82 is under the 0.90 bar) · /model to change')
 })
 
 test('the haiku bar is an option', { options: { haikuConfidence: 0.8 } }, async ($, on) => {
@@ -175,19 +176,19 @@ test('API key from the plugin option: no env needed, sent as the bearer token', 
   expect(set).toEqual(['haiku'])
 })
 
-test('Jev hangs: the clock ends the wait and the fallback applies, with the reason', async ($, on) => {
+test('Jev hangs: the clock ends the wait and Sonnet applies, with the reason', async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
   const clock = mock.clock(on)
   on('http.fetch', () => new Promise(() => {}))
-  const { set, lines } = session(on, 0)
+  const { set, lines } = session(on, 0, 'haiku')
 
   const done = $.prompt.submit(submit('rename foo to bar'))
   await clock.settle()
   await clock.advance(5000)
   await done
 
-  expect(set).toEqual(['opus'])
-  expect(lines[0]).toBe('jev → opus (0.00, escalate: Jev did not answer within 5s) for this session, was sonnet · /model to change')
+  expect(set).toEqual(['sonnet'])
+  expect(lines[0]).toBe('jev → sonnet (0.00, escalate: Jev did not answer within 5s), was haiku · /model to change')
 })
 
 test('a throw in the routing: the prompt goes through, model unchanged, and it says so', async ($, on) => {
@@ -220,4 +221,23 @@ test('the first turn after the pick names the picked model, not the one from bef
   for await (const _ of $.turn.step({ turnId: 'turn-1', index: 0, model: 'claude-sonnet-5-5', messageCount: 1 })) void _
 
   expect(names).toEqual(['haiku'])
+})
+
+test('an interrupted first turn does not hand its pick to the next turn', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { state } = session(on, 0)
+  const names: string[] = []
+  on('turn.step', async function* (_$, e) {
+    names.push(e.model)
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
+  })
+
+  // The first turn is interrupted before its first step, so no turn.step ever claims it.
+  await $.prompt.submit(submit('rename foo to bar'))
+  state.turns = 1
+  await $.prompt.submit(submit('now something else'))
+  for await (const _ of $.turn.step({ turnId: 'turn-2', index: 0, model: 'claude-sonnet-5-5', messageCount: 1 })) void _
+
+  expect(names).toEqual(['claude-sonnet-5-5'])
 })

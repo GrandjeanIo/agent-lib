@@ -1,6 +1,6 @@
 export * from './types.ts'
 export * from './confidence.ts'
-export { JevClient, JevError, fetchTransport, DEFAULT_BASE_URL, DEFAULT_MODEL, type JevClientOptions } from './client.ts'
+export { JevClient, JevError, DEFAULT_BASE_URL, DEFAULT_MODEL, type JevClientOptions } from './client.ts'
 export {
   DEFAULT_BANDS,
   PRESETS,
@@ -32,7 +32,6 @@ export {
   type Overrides,
 } from './model.ts'
 export { keywordResponder, mockTransport, toAnswer, type Responder } from './mock.ts'
-export { parseOverrides, parseSpec } from './spec.ts'
 export {
   API_KEY_ENV,
   BASE_URL_ENV,

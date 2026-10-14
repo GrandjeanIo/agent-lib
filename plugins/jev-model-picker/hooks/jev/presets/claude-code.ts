@@ -1,8 +1,7 @@
 // Starting specs for routing decisions inside Claude Code (Module 1).
-// Plain data: tune them per project with `model.tune({...})` or an overrides
-// JSON file (see ../examples/), not by editing this file.
+// Plain data: tune them per project with `model.tune({...})`, not by editing this file.
 
-import { PRESETS, defineSpec } from '../core/index.ts'
+import { defineSpec } from '../core/index.ts'
 
 /** Asked on UserPromptSubmit: how much machinery does this prompt need? */
 export const promptRouter = defineSpec({
@@ -30,40 +29,6 @@ export const promptRouter = defineSpec({
       type: 'score',
       instructions: 'How large is the change this prompt asks for?',
       criteria: ['No code change', 'A few lines', 'One file', 'Several files', 'Cross-cutting / many modules'],
-    },
-  },
-})
-
-/** Asked on PreToolUse: should a person see this tool call before it runs? */
-export const toolGuard = defineSpec({
-  name: 'claude-code.tool-guard',
-  context: 'Claude Code is about to run this tool call on a developer machine. Judge the call, not the person.',
-  bands: PRESETS.strict,
-  decisions: {
-    destructive: {
-      type: 'noul',
-      instructions:
-        'Could this tool call destroy or overwrite work that is hard to recover (deleting files, force-pushing, dropping data, resetting git state)?',
-      // Missing a destructive call is ~9x worse than one needless prompt -> say yes from p >= 0.1.
-      costs: { falsePositive: 1, falseNegative: 9 },
-      fallback: true,
-    },
-    exfiltration: {
-      type: 'noul',
-      instructions: 'Could this tool call send secrets, credentials or private code to a third party?',
-      costs: { falsePositive: 1, falseNegative: 19 },
-      fallback: true,
-    },
-    scope: {
-      type: 'choice',
-      instructions: 'What does this tool call touch?',
-      criteria: {
-        read: 'Only reads: files, search, listing, status.',
-        workspace: 'Writes inside the project working tree.',
-        system: 'Writes outside the project, installs software, or changes system configuration.',
-        remote: 'Talks to a remote service: push, deploy, publish, API call with side effects.',
-      },
-      fallback: 'system',
     },
   },
 })

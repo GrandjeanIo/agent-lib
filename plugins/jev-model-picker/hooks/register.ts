@@ -51,7 +51,12 @@ export const register: Register = (on, options) => {
   on('prompt.submit', async ($, e, next) => {
     // Mid-session: leave the model alone. Only a new session or a /clear routes again.
     if (!e.text.trim()) return next(e)
-    if (!cleared && (await $.session.turns()) > 0) return next(e)
+    if (!cleared && (await $.session.turns()) > 0) {
+      // A first turn that was interrupted before its first step never set firstTurn, so its pick
+      // would otherwise land on the next turn. Any later prompt ends that claim.
+      pending = firstTurn = undefined
+      return next(e)
+    }
     cleared = false
 
     // The plugin option (secure storage) wins; the environment is the fallback.
@@ -65,22 +70,31 @@ export const register: Register = (on, options) => {
     }
 
     // `$` can't cross an import, so the glue lives here: env in, $.http.fetch as the transport.
+    // Only the key and mock flag are passed. TYPESAFE_BASE_URL and JEV_MODEL are not read: the
+    // endpoint and model are fixed, see README "Data and privacy".
     const client = clientFromEnv({ TYPESAFE_API_KEY: key, JEV_MOCK: mock }, (url, init) => $.http.fetch(url, init), {
       maxRetries: 0,
     })
-    // Only the model question matters here; size is kept for the notice.
+    // Only the model question is asked. Size was never shown, so it isn't sent.
     const { haiku: _, ...upTiers } = promptRouter.decisions.model.criteria
     const router = createDecisionModel(promptRouter, { client }).tune({
-      decisions: { subagent: { enabled: false }, ...(allowHaiku ? {} : { model: { criteria: upTiers } }) },
+      decisions: {
+        subagent: { enabled: false },
+        size: { enabled: false },
+        ...(allowHaiku ? {} : { model: { criteria: upTiers } }),
+      },
     })
-    // A Jev that doesn't answer in time is the same as an unreachable one: escalate to the fallback.
+    // A slow Jev gets Sonnet, not the Opus escalation: a cold start shouldn't move the whole session
+    // to the expensive tier. Unsure or unreachable Jev still escalates to the fallback.
     const answer = await within(router.decide(e.text), signal => $.clock.sleep(JEV_WAIT_MS, { signal }))
     const { value, confidence, band, reason } = answer?.decisions.model ?? {
-      value: promptRouter.decisions.model.fallback,
+      value: 'sonnet' as const,
       confidence: 0,
       band: 'escalate',
       reason: `Jev did not answer within ${JEV_WAIT_MS / 1000}s`,
     }
+    // Decision.value is typed as possibly undefined, and the model written below is typed from it,
+    // so this narrows the type. It can't fire at runtime: an escalation always carries a tier.
     if (!value) return next(e)
 
     // A wrong downgrade costs more than a wrong upgrade: Haiku needs its own, higher bar.
@@ -105,7 +119,7 @@ export const register: Register = (on, options) => {
     // /model is still cheap; the toast is the moment it happens.
     const from = row?.value
     const was = from && from !== model ? `, was ${from}` : ''
-    $.ui.log(`jev → ${model} (${why}) for this session${was} · /model to change`)
+    $.ui.log(`jev → ${model} (${why})${was} · /model to change`)
     $.ui.toast(`jev → ${model} (${why})${was}`, { timeoutMs: 6000 })
     $.ui.status(`jev → ${model}`)
     return next(e)

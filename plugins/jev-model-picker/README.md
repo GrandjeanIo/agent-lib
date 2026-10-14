@@ -18,16 +18,17 @@ The pick writes the `/config` model row and applies to that first turn. The tran
 line with the result, so you see the pick before the cache grows and can still `/model` up cheaply:
 
 ```
-jev → haiku (0.97) for this session, was sonnet · /model to change
-jev → sonnet (haiku 0.82 is under the 0.90 bar) for this session · /model to change
-jev → sonnet (0.75, confirm: <JEV's reason>) for this session · /model to change
-jev → opus (0.10, escalate: <JEV's reason>) for this session · /model to change
+jev → haiku (0.97), was sonnet · /model to change
+jev → sonnet (haiku 0.82 is under the 0.90 bar) · /model to change
+jev → sonnet (0.75, confirm: <JEV's reason>) · /model to change
+jev → opus (0.10, escalate: <JEV's reason>) · /model to change
 ```
 
 - **act**: JEV is sure. The line shows its confidence.
 - **confirm**: the line adds JEV's reason.
-- **escalate** (JEV is unsure, unreachable, or silent for 5 seconds): the preset's fallback, `opus`,
-  plus the reason.
+- **escalate** (JEV is unsure or unreachable): the preset's fallback, `opus`, plus the reason.
+- **silent for 5 seconds**: `sonnet`, plus the reason. A slow API shouldn't move the session to the
+  most expensive tier.
 - **Haiku has a higher bar.** A wrong downgrade costs more than a wrong upgrade, so Haiku needs
   confidence ≥ `haikuConfidence` (default 0.9). Below that the session gets Sonnet.
 
@@ -80,9 +81,8 @@ of the plugin. Tune the decision in `hooks/register.ts` with `.tune({...})`.
 after `/clear`, to the TypeSafe JEV API at `https://api.typesafe.ai/v1/systemone`. Each request holds:
 
 - the prompt text, verbatim,
-- fixed instructions: a sentence saying the prompt came from Claude Code, the model-tier question
-  (haiku, sonnet or opus, with a criterion for each), and a size question (five levels, from
-  "No code change" to "Cross-cutting / many modules"),
+- fixed instructions: a sentence saying the prompt came from Claude Code, and the model-tier question
+  (haiku, sonnet or opus, with a criterion for each),
 - the model name, `jev-latest`.
 
 Not sent: the working directory, file contents, transcript or session history, and any prompt after
@@ -121,6 +121,5 @@ complete when it is scanned alone. The format is required by the plugin harness,
 The degraded analyzer is for the same file. Treat the result as a near-complete review, not a clean
 bill of health.
 
-The earlier scan's finding (`SQP-2`, the first prompt sent to a third-party API without disclosure)
-is addressed by the "Data and privacy" section. The remaining `E1` finding flags that section's
-description of the transmission, which is intended.
+The remaining `E1` finding flags the "Data and privacy" section's description of the transmission,
+which is intended.

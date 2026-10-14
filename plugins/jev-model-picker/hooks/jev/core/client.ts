@@ -72,26 +72,10 @@ export class JevClient {
   }
 }
 
-/** The slice of the standard `fetch` that `fetchTransport` uses. */
-export type FetchLike = (
-  url: string,
-  init: { method: string; headers: Record<string, string>; body: string },
-) => Promise<{ status: number; ok: boolean; text(): Promise<string> }>
-
-// Core runs in the mod sandbox too, which has no fetch or timers, so these
-// globals are typed as maybe-present rather than taken from DOM/Node lib types.
+// Core runs in the mod sandbox too, which has no timers, so this global is typed as
+// maybe-present rather than taken from DOM/Node lib types.
 const host = globalThis as {
-  fetch?: FetchLike
   setTimeout?: (fn: () => void, ms: number) => unknown
-}
-
-/** Adapts the standard `fetch` (Node, Bun, browsers) to a Transport. */
-export function fetchTransport(fetchImpl: FetchLike | undefined = host.fetch): Transport {
-  if (!fetchImpl) throw new Error('fetchTransport: no global fetch here; pass one in')
-  return async (url, init) => {
-    const res = await fetchImpl(url, init)
-    return { status: res.status, ok: res.ok, text: await res.text() }
-  }
 }
 
 function sleep(ms: number): Promise<void> {

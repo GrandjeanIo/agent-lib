@@ -67,7 +67,7 @@ export type SystemOneResponse = {
 /**
  * The one seam to the network. Shaped like the Claude Code mod API's
  * `$.http.fetch` (resolves once the body is read), so a mod can pass that in
- * directly; `fetchTransport()` adapts the standard `fetch` for Node/Bun.
+ * directly.
  */
 export type Transport = (
   url: string,
