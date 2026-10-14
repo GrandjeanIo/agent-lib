@@ -24,31 +24,3 @@ Add this repo as a marketplace once, then install what you need:
 /plugin marketplace add GrandjeanIo/agent-lib
 /plugin install jev-model-picker@agent-lib
 ```
-
-### Skills
-
-#### Manual installation
-
-Copy the skill directory into `~/.claude/skills/`:
-
-```bash
-cp -r skills/<skill-name> ~/.claude/skills/
-```
-
-Claude Code picks up skills from `~/.claude/skills/` automatically — no restart required.
-
-#### Via agr
-
-[agr](https://github.com/computerlovetech/agr) is a package manager for Claude Code skills. Install a skill from this repo with:
-
-```bash
-agr install GrandjeanIo/agent-lib/<skill-name>
-```
-
-To list all available skills in a registry that includes this repo:
-
-```bash
-agr search
-```
-
-See the [agr documentation](https://github.com/computerlovetech/agr) for registry configuration and more options.
