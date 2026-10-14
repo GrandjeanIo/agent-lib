@@ -4,13 +4,7 @@ A collection of agent tools - check the table for development status before impl
 
 ## Contributing
 
-PRs are welcome. Every PR must include a security scan result from [NVIDIA Skillspector](https://github.com/nvidia/skillspector). Paste the scan output (or a summary table like the one in `skills/ollama-agent/README.md`) into your skill's `README.md` before opening the PR. PRs without a scan will not be merged.
-
-## Available skills
-
-| Skill | Description | Status
-|---|---|---|
-| [ollama-agent](skills/ollama-agent/) | Delegate tasks to a local Ollama model | POC
+PRs are welcome. Every PR must include a security scan result from [NVIDIA Skillspector](https://github.com/nvidia/skillspector). Paste the scan output (or a summary table like the one in `plugins/jev-model-picker/README.md`) into your plugin's or skill's `README.md` before opening the PR. PRs without a scan will not be merged.
 
 ## Plugins
 
@@ -29,7 +23,6 @@ Add this repo as a marketplace once, then install what you need:
 ```
 /plugin marketplace add GrandjeanIo/agent-lib
 /plugin install jev-model-picker@agent-lib
-/plugin install ollama-agent@agent-lib
 ```
 
 ### Skills

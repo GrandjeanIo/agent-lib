@@ -7,17 +7,9 @@
     {
       "name": "jev-model-picker",
       "source": "./plugins/jev-model-picker"
-    },
-    {
-      "name": "ollama-agent",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/ollama-agent"
-      ]
     }
   ],
   "metadata": {
-    "description": "Agent tools and Claude Code plugins: the jev-model-picker plugin and the ollama-agent skill"
+    "description": "Agent tools and Claude Code plugins: the jev-model-picker plugin"
   }
 }
