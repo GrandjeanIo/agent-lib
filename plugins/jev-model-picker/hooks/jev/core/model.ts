@@ -217,6 +217,13 @@ export function validateSpec(spec: DecisionModelSpec): void {
     if (d.type === 'noul' && d.yesAt !== undefined && (d.yesAt <= 0 || d.yesAt >= 1)) {
       problems.push(`${where}: yesAt must be strictly between 0 and 1`)
     }
+    if (d.type === 'noul' && d.yesAt === undefined && d.costs) {
+      // Costs where one mistake is free put the cut-off at 0 or 1, which no answer can clear.
+      const { falsePositive, falseNegative } = d.costs
+      if (!(falsePositive > 0 && falseNegative > 0)) {
+        problems.push(`${where}: costs.falsePositive and costs.falseNegative must both be above 0`)
+      }
+    }
   }
   if (problems.length) throw new SpecError(`Invalid decision model:\n  ${problems.join('\n  ')}`)
 }

@@ -1,7 +1,7 @@
 // JEV picks the model tier from the first prompt of a fresh context.
 // `./jev/` is the JEV decision model, owned by this repo.
-import type { Register } from 'claude-code'
-import { clientFromEnv, createDecisionModel } from './jev/core/index.ts'
+import type { PromptSubmitInput, Register } from 'claude-code'
+import { JevError, clientFromEnv, createDecisionModel, merge } from './jev/core/index.ts'
 import { promptRouter } from './jev/presets/claude-code.ts'
 
 // The hook sandbox has no timers, so a hung Jev is bounded by the clock instead. The hook's
@@ -17,6 +17,12 @@ const MODEL_IDS: Record<string, string> = {
   opus: 'claude-opus-5-5',
 }
 const KNOWN_IDS = new Set(Object.values(MODEL_IDS))
+
+// Only words the person typed go to Jev: no slash command (a "/model opus" is their own pick), no
+// prompt they don't see, and nothing a notification, a peer, a schedule or a plugin queued.
+const USER_ORIGINS = new Set<PromptSubmitInput['origin']['kind']>(['composer', 'bridge', 'sdk'])
+const routable = (e: PromptSubmitInput) =>
+  !!e.text.trim() && !e.command && !e.isMeta && USER_ORIGINS.has(e.origin.kind)
 
 // The work's answer, or undefined once the wait ends first. The loser's promise is left to settle.
 async function within<T>(work: Promise<T>, wait: (signal: AbortSignal) => Promise<void>): Promise<T | undefined> {
@@ -45,29 +51,48 @@ export const register: Register = (on, options) => {
       ? Math.min(1, Math.max(0, options.haikuConfidence))
       : 0.9
 
+  // Only the model question is asked. Size was never shown, so it isn't sent.
+  const { haiku: _, ...upTiers } = promptRouter.decisions.model.criteria
+  const spec = merge(promptRouter, {
+    decisions: {
+      subagent: { enabled: false },
+      size: { enabled: false },
+      ...(allowHaiku ? {} : { model: { criteria: upTiers } }),
+    },
+  })
+
   // The turn has already resolved its model when the prompt is submitted, so the /config
   // switch only lands from the next prompt on. The first turn's requests are rewritten here.
   let pending: string | undefined
   let firstTurn: string | undefined
+  // The model the first turn's opening step named. A later step naming another is a fallback's.
+  let firstModel: string | undefined
   // After /clear, turns() is already 1 (the /clear record opens the new transcript), so the
   // clear itself is what marks the next prompt as the first of a fresh context.
   let cleared = false
+  // Set before the first await, so a prompt queued while Jev answers can't route a second time.
+  let claimed = false
 
   on('session.end', async ($, e, next) => {
+    claimed = false
     if (e.reason === 'clear') cleared = true
     return next(e)
   })
 
   on('prompt.submit', async ($, e, next) => {
+    const first = !claimed
+    claimed = true
     // Mid-session: leave the model alone. Only a new session or a /clear routes again.
-    if (!e.text.trim()) return next(e)
-    if (!cleared && (await $.session.turns()) > 0) {
+    const fresh = first && (cleared || (await $.session.turns()) === 0)
+    // The first prompt of a fresh context ends the claim, whether or not it routes.
+    cleared = false
+    if (!fresh || !routable(e)) {
       // A first turn that was interrupted before its first step never set firstTurn, so its pick
-      // would otherwise land on the next turn. Any later prompt ends that claim.
-      pending = firstTurn = undefined
+      // would otherwise land on the next turn. Any later prompt ends that claim, except one typed
+      // into the first turn while it runs.
+      if (!e.turnId || e.turnId !== firstTurn) pending = firstTurn = firstModel = undefined
       return next(e)
     }
-    cleared = false
 
     // The plugin option (secure storage) wins; the environment is the fallback.
     const key = apiKey || (await $.env.get('TYPESAFE_API_KEY'))
@@ -85,24 +110,27 @@ export const register: Register = (on, options) => {
     const client = clientFromEnv({ TYPESAFE_API_KEY: key, JEV_MOCK: mock }, (url, init) => $.http.fetch(url, init), {
       maxRetries: 0,
     })
-    // Only the model question is asked. Size was never shown, so it isn't sent.
-    const { haiku: _, ...upTiers } = promptRouter.decisions.model.criteria
-    const router = createDecisionModel(promptRouter, { client }).tune({
-      decisions: {
-        subagent: { enabled: false },
-        size: { enabled: false },
-        ...(allowHaiku ? {} : { model: { criteria: upTiers } }),
-      },
-    })
-    // A slow Jev gets Sonnet, not the Opus escalation: a cold start shouldn't move the whole session
-    // to the expensive tier. Unsure or unreachable Jev still escalates to the fallback.
-    const answer = await within(router.decide(e.text), signal => $.clock.sleep(JEV_WAIT_MS, { signal }))
-    const { value, confidence, band, reason } = answer?.decisions.model ?? {
-      value: 'sonnet' as const,
-      confidence: 0,
-      band: 'escalate',
-      reason: `Jev did not answer within ${JEV_WAIT_MS / 1000}s`,
+    const router = createDecisionModel(spec, { client, onError: 'throw' })
+    let decision
+    try {
+      decision = (await within(router.decide(e.text), signal => $.clock.sleep(JEV_WAIT_MS, { signal })))?.decisions.model
+    } catch (error) {
+      // A 4xx (a mistyped or revoked key) won't fix itself. Escalating would move every session to Opus.
+      if (error instanceof JevError && !error.retryable) {
+        $.ui.log(`jev: ${error.message}, model unchanged. Check the TypeSafe API key in /plugin → jev-model-picker`)
+        return next(e)
+      }
+      // Unreachable Jev escalates to the fallback, as an unsure one does.
+      const message = error instanceof Error ? error.message : String(error)
+      const reason = `Jev unavailable: ${message}`
+      decision = { value: spec.decisions.model.fallback, confidence: 0, band: 'escalate' as const, reason }
     }
+    // A slow Jev changes nothing: no answer is no reason to override the model the person had.
+    if (!decision) {
+      $.ui.log(`jev: no answer within ${JEV_WAIT_MS / 1000}s, model unchanged`)
+      return next(e)
+    }
+    const { value, confidence, band, reason } = decision
     // Decision.value is typed as possibly undefined, and the model written below is typed from it,
     // so this narrows the type. It can't fire at runtime: an escalation always carries a tier.
     if (!value) return next(e)
@@ -139,15 +167,29 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // The person's own model change makes the jev status stale. This plugin's own config.set isn't seen here.
+  on('config.set', { key: 'model' }, async ($, e, next) => {
+    $.ui.status(undefined)
+    return next(e)
+  })
+  on('command.run', { command: 'model' }, async ($, e, next) => {
+    $.ui.status(undefined)
+    return next(e)
+  })
+
   on('turn.step', async function* ($, e, next) {
     if (e.agentId) return yield* next(e)
-    if (pending && e.index === 0) firstTurn = e.turnId
-    if (e.turnId !== firstTurn || !pending || !KNOWN_IDS.has(e.model)) return yield* next(e)
+    if (pending && e.index === 0) {
+      firstTurn = e.turnId
+      firstModel = e.model
+    }
+    // Only the model the turn opened on is rewritten. A step the engine moved to a fallback keeps it.
+    if (e.turnId !== firstTurn || !pending || e.model !== firstModel || !KNOWN_IDS.has(e.model)) return yield* next(e)
     return yield* next({ ...e, model: pending })
   })
 
   on('turn.complete', async ($, e, next) => {
-    if (!e.agentId && e.turnId === firstTurn) pending = firstTurn = undefined
+    if (!e.agentId && e.turnId === firstTurn) pending = firstTurn = firstModel = undefined
     return next(e)
   })
 }

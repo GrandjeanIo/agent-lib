@@ -30,8 +30,8 @@ jev → opus (0.10, escalate: <JEV's reason>) · /model to change
 - **act**: JEV is sure. The line shows its confidence.
 - **confirm**: the line adds JEV's reason.
 - **escalate** (JEV is unsure or unreachable): the preset's fallback, `opus`, plus the reason.
-- **silent for 5 seconds**: `sonnet`, plus the reason. A slow API shouldn't move the session to the
-  most expensive tier.
+- **silent for 5 seconds**: the model is left unchanged, and the log says so.
+- **key rejected** (a 4xx such as 401): the model is left unchanged, and the log says to check the key.
 - **Haiku has a higher bar.** A wrong downgrade costs more than a wrong upgrade, so Haiku needs
   confidence ≥ `haikuConfidence` (default 0.9). Below that the session gets Sonnet.
 
@@ -76,7 +76,7 @@ gitignored and written locally by Claude Code, so a fresh clone fails with TS508
 version (5.4 rejects the generated config's `--target`).
 
 `hooks/jev/` is the JEV decision model. It is first-party code in this repo, edited here like the rest
-of the plugin. Tune the decision in `hooks/register.ts` with `.tune({...})`.
+of the plugin. Tune the decision in `hooks/register.ts` through the overrides merged into the preset.
 
 ## Data and privacy
 
@@ -90,7 +90,9 @@ after `/clear`, to the TypeSafe JEV API at `https://api.typesafe.ai/v1/systemone
 - the model name, `jev-latest`.
 
 Not sent: the working directory, file contents, transcript or session history, and any prompt after
-the first. Mid-session prompts are not sent. The API key goes to the same endpoint as a bearer token.
+the first. Mid-session prompts are not sent. Only a prompt you typed is sent. If the first input is a
+slash command, a hidden prompt, or a message from a notification, peer session, schedule or another
+plugin, nothing is sent and that context keeps its model. The API key goes to the same endpoint as a bearer token.
 The endpoint is fixed (the mod ignores `TYPESAFE_BASE_URL` and `JEV_MODEL`). The retention policy
 belongs to TypeSafe; check their terms before you use it on private code.
 

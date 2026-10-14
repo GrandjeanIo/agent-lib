@@ -2,12 +2,14 @@ import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import { toAnswer, type Question, type SystemOneRequest } from './hooks/jev/core/index.ts'
 
-// Answers the mod's $.http.fetch the way Jev would, from fixed probabilities over the tiers.
-function jev(on: On, tiers: Record<string, number>) {
+// Answers the mod's $.http.fetch the way Jev would, from fixed probabilities over the tiers,
+// once `gate` (when given) opens.
+function jev(on: On, tiers: Record<string, number>, gate?: Promise<void>) {
   const sent: (SystemOneRequest & { authorization?: string })[] = []
   on('http.fetch', async (_$, e) => {
     const req = JSON.parse(e.init?.body ?? '{}') as SystemOneRequest
     sent.push({ ...req, authorization: e.init?.headers?.authorization })
+    await gate
     const raw = (id: string, q: Question) => (id === 'model' ? tiers : q.type === 'score' ? [0.9, 0.05, 0.05, 0, 0] : 0.5)
     const answers = Object.fromEntries(Object.entries(req.questions).map(([id, q]) => [id, toAnswer(q, raw(id, q))]))
     return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ model: 'jev-1.13.0', answers }) } }
@@ -34,7 +36,8 @@ function session(on: On, turns: number, current = 'sonnet') {
   return { set, lines, toasts, state }
 }
 
-const submit = (text: string) => ({ text, wait: false }) as never
+// A prompt the person typed, unless `more` says otherwise (a command, a meta prompt, another origin).
+const submit = (text: string, more: object = {}) => ({ text, wait: false, origin: { kind: 'composer' }, ...more }) as never
 
 test('first prompt of a fresh context: jev picks the tier and the session model is set', async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
@@ -176,19 +179,118 @@ test('API key from the plugin option: no env needed, sent as the bearer token', 
   expect(set).toEqual(['haiku'])
 })
 
-test('Jev hangs: the clock ends the wait and Sonnet applies, with the reason', async ($, on) => {
+test('Jev hangs: the clock ends the wait and the model is left as it was', async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
   const clock = mock.clock(on)
   on('http.fetch', () => new Promise(() => {}))
-  const { set, lines } = session(on, 0, 'haiku')
+  const { set, lines } = session(on, 0, 'opus')
 
   const done = $.prompt.submit(submit('rename foo to bar'))
   await clock.settle()
   await clock.advance(5000)
   await done
 
-  expect(set).toEqual(['sonnet'])
-  expect(lines[0]).toBe('jev → sonnet (0.00, escalate: Jev did not answer within 5s), was haiku · /model to change')
+  expect(set).toEqual([])
+  expect(lines).toEqual(['jev: no answer within 5s, model unchanged'])
+})
+
+test('Jev rejects the key (401): model left alone, not escalated to opus', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'typo' })
+  on('http.fetch', async () => ({ value: { status: 401, ok: false, headers: {}, text: 'unauthorized' } }))
+  const { set, lines } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(set).toEqual([])
+  expect(lines[0]).toMatch(/^jev: Jev returned 401, model unchanged/)
+})
+
+test('a slash command as the first input: not sent to Jev, and the prompt after it does not route', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set } = session(on, 0)
+
+  await $.prompt.submit(submit('/model opus', { command: { name: 'model', args: 'opus' } }))
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(sent.length).toBe(0)
+  expect(set).toEqual([])
+})
+
+for (const [what, more] of [
+  ['a meta prompt', { isMeta: true }],
+  ["another plugin's prompt", { origin: { kind: 'plugin', name: 'other' } }],
+  ["a peer session's message", { origin: { kind: 'peer' } }],
+] as const) {
+  test(`${what} as the first input: not sent to Jev`, async ($, on) => {
+    mock.env(on, { TYPESAFE_API_KEY: 'k' })
+    const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+    const { set } = session(on, 0)
+
+    await $.prompt.submit(submit('rename foo to bar', more))
+
+    expect(sent.length).toBe(0)
+    expect(set).toEqual([])
+  })
+}
+
+test('after /clear, an attachment-only first prompt ends the claim: the next prompt does not route', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set } = session(on, 1)
+  on('session.end', async (_$, e) => ({ sessionId: e.sessionId }) as never)
+
+  await $.session.end({ reason: 'clear', sessionId: 'old', resume: { id: 'old' } } as never)
+  await $.prompt.submit(submit('', { attachments: [{ type: 'image', mediaType: 'image/png' }] }))
+  await $.prompt.submit(submit('what is in this screenshot?'))
+
+  expect(sent.length).toBe(0)
+  expect(set).toEqual([])
+})
+
+test('a prompt queued while Jev is still answering the first: only the first is sent', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => (release = resolve))
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 }, gate)
+  const { set } = session(on, 0)
+
+  const first = $.prompt.submit(submit('rename foo to bar'))
+  const second = $.prompt.submit(submit('and the tests too'))
+  release()
+  await Promise.all([first, second])
+
+  expect(sent.length).toBe(1)
+  expect(set).toEqual(['haiku'])
+})
+
+test("a first-turn step the engine moved to a fallback model keeps the fallback", async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.3, sonnet: 0.4, opus: 0.3 })
+  session(on, 0)
+  const names: string[] = []
+  on('turn.step', async function* (_$, e) {
+    names.push(e.model)
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
+  })
+
+  await $.prompt.submit(submit('make it better'))
+  for await (const _ of $.turn.step({ turnId: 'turn-1', index: 0, model: 'claude-sonnet-5-5', messageCount: 1 })) void _
+  for await (const _ of $.turn.step({ turnId: 'turn-1', index: 1, model: 'claude-haiku-5-5', messageCount: 3 })) void _
+
+  expect(names).toEqual(['claude-opus-5-5', 'claude-haiku-5-5'])
+})
+
+test('the person changes the model: the jev status line is cleared', async ($, on) => {
+  const statuses: (string | undefined)[] = []
+  on('ui.status', async (_$, e) => (statuses.push(e.text), { value: undefined }))
+  on('config.set', async (_$, e) => ({ value: e.value }) as never)
+  on('command.run', async () => ({ text: '' }) as never)
+
+  await $.config.set({ key: 'model', value: 'opus', previous: 'haiku', origin: { kind: 'composer' } } as never)
+  await $.command.run({ command: 'model', args: 'sonnet' } as never)
+
+  expect(statuses).toEqual([undefined, undefined])
 })
 
 test('a throw in the routing: the prompt goes through, model unchanged, and it says so', async ($, on) => {

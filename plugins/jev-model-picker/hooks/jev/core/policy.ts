@@ -89,7 +89,9 @@ export function yesThreshold(spec: NoulSpec): number {
  */
 export function noulDecisionConfidence(p: number, t: number): number {
   if (t === 0.5) return noulConfidence(p)
-  return p >= t ? (p - t) / (1 - t) : (t - p) / t
+  // A cut-off of 0 or 1 leaves no room on one side: p sits on it, so nothing is known either way.
+  const room = p >= t ? 1 - t : t
+  return room > 0 ? Math.abs(p - t) / room : 0
 }
 
 export function interpret(id: string, spec: DecisionSpec, answer: Answer, modelBands?: Partial<Bands>): Decision {

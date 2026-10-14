@@ -11,7 +11,7 @@ export type JevClientOptions = {
   model?: string
   /** Override for a gateway (e.g. Zuplo); `/v1/systemone` is appended. */
   baseUrl?: string
-  /** Retries on 429 / 5xx / network errors. Default 2. */
+  /** Retries on 429 / 5xx / network errors. Default 2. None where the host has no timers. */
   maxRetries?: number
 }
 
@@ -52,7 +52,8 @@ export class JevClient {
         return await this.attempt(url, headers, body)
       } catch (error) {
         const retryable = !(error instanceof JevError) || error.retryable
-        if (!retryable || attempt >= maxRetries) throw error
+        // Without timers there is no backoff, and retrying at once only hammers a 429.
+        if (!retryable || attempt >= maxRetries || !canSleep()) throw error
         await sleep(250 * 2 ** attempt)
       }
     }
@@ -78,7 +79,10 @@ const host = globalThis as {
   setTimeout?: (fn: () => void, ms: number) => unknown
 }
 
+function canSleep(): boolean {
+  return typeof host.setTimeout === 'function'
+}
+
 function sleep(ms: number): Promise<void> {
-  if (typeof host.setTimeout !== 'function') return Promise.resolve()
   return new Promise(resolve => host.setTimeout?.(resolve, ms))
 }
