@@ -1,0 +1,15 @@
+{
+  "name": "agent-lib",
+  "owner": {
+    "name": "Anders Grandjean-Thomsen"
+  },
+  "plugins": [
+    {
+      "name": "jev-model-picker",
+      "source": "./plugins/jev-model-picker"
+    }
+  ],
+  "metadata": {
+    "description": "Agent tools and Claude Code plugins: the jev-model-picker plugin"
+  }
+}

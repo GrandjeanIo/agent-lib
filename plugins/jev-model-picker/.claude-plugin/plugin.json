@@ -1,0 +1,28 @@
+{
+  "name": "jev-model-picker",
+  "version": "0.2.0",
+  "author": { "name": "Anders Grandjean-Thomsen" },
+  "description": "My name is Jev. I pick your model once, at session start and after /clear. No prompts, no mid-session switches, cache stays warm.",
+  "userConfig": {
+    "apiKey": {
+      "type": "string",
+      "title": "TypeSafe API key",
+      "description": "Key for the JEV decision model. Kept in secure storage. Leave empty to use TYPESAFE_API_KEY from the environment.",
+      "sensitive": true,
+      "required": false,
+      "default": ""
+    },
+    "allowHaiku": {
+      "type": "boolean",
+      "title": "Route down to Haiku",
+      "description": "Off: JEV picks only between Sonnet and Opus.",
+      "default": true
+    },
+    "haikuConfidence": {
+      "type": "number",
+      "title": "Haiku confidence bar",
+      "description": "JEV must be at least this sure (0-1) before downgrading to Haiku; below it the session gets Sonnet. A wrong downgrade costs more than a wrong upgrade.",
+      "default": 0.9
+    }
+  }
+}
