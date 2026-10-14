@@ -1,0 +1,23 @@
+{
+  "name": "agent-lib",
+  "owner": {
+    "name": "Anders Grandjean-Thomsen"
+  },
+  "plugins": [
+    {
+      "name": "jev-model-router",
+      "source": "./plugins/jev-model-router"
+    },
+    {
+      "name": "ollama-agent",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/ollama-agent"
+      ]
+    }
+  ],
+  "metadata": {
+    "description": "Agent tools and Claude Code plugins: a model router mod and the ollama-agent skill"
+  }
+}

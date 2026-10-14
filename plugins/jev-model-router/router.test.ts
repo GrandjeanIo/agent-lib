@@ -1,0 +1,176 @@
+import type { On } from 'claude-code'
+import { expect, mock, test } from 'claude-code/testing'
+import { toAnswer, type Question, type SystemOneRequest } from './hooks/jev/core/index.ts'
+
+// Answers the mod's $.http.fetch the way Jev would, from fixed probabilities over the tiers.
+function jev(on: On, tiers: Record<string, number>) {
+  const sent: (SystemOneRequest & { authorization?: string })[] = []
+  on('http.fetch', async (_$, e) => {
+    const req = JSON.parse(e.init?.body ?? '{}') as SystemOneRequest
+    sent.push({ ...req, authorization: e.init?.headers?.authorization })
+    const raw = (id: string, q: Question) => (id === 'model' ? tiers : q.type === 'score' ? [0.9, 0.05, 0.05, 0, 0] : 0.5)
+    const answers = Object.fromEntries(Object.entries(req.questions).map(([id, q]) => [id, toAnswer(q, raw(id, q))]))
+    return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ model: 'jev-1.13.0', answers }) } }
+  })
+  return sent
+}
+
+// A session that has seen `turns` prompts, with a /config model row that records what it was set to.
+function session(on: On, turns: number, current = 'sonnet') {
+  const set: unknown[] = []
+  on('session.turns', async () => ({ value: turns }))
+  on('session.model', async () => ({ value: 'claude-haiku-5-5' }))
+  on('config.list', async () => ({
+    value: [{ key: 'model', label: 'Model', kind: 'choice', value: current, provider: { plugin: 'engine', tier: 'core' } }] as never,
+  }))
+  on('config.set', async (_$, e) => (set.push(e.value), { value: e.value }) as never)
+  const lines: string[] = []
+  on('ui.log', async (_$, e) => (lines.push(e.text), { value: undefined }))
+  on('ui.status', async () => ({ value: undefined }))
+  const toasts: string[] = []
+  on('ui.toast', async (_$, e) => (toasts.push(e.text), { value: undefined }))
+  on('prompt.submit', async (_$, e) => ({ text: e.text }) as never)
+  return { set, lines, toasts }
+}
+
+const submit = (text: string) => ({ text, wait: false }) as never
+
+test('first prompt of a fresh context: jev picks the tier and the session model is set', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set, lines, toasts } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar in utils.ts'))
+
+  expect(sent.length).toBe(1)
+  expect(Object.keys(sent[0]!.questions).sort()).toEqual(['model', 'size'])
+  expect(set).toEqual(['haiku'])
+  expect(lines).toEqual(['jev → haiku (0.97) for this session, was sonnet · /model to change'])
+  expect(toasts).toEqual(['jev → haiku (0.97), was sonnet'])
+})
+
+test('mid-session prompt: no Jev call, model left alone', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set } = session(on, 3)
+
+  await $.prompt.submit(submit('now just fix the typo'))
+
+  expect(sent.length).toBe(0)
+  expect(set).toEqual([])
+})
+
+test('Jev unsure: falls back to opus and says why', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.3, sonnet: 0.4, opus: 0.3 })
+  const { set, lines } = session(on, 0)
+
+  await $.prompt.submit(submit('make it better'))
+
+  expect(set).toEqual(['opus'])
+  expect(lines[0]).toMatch(/^jev → opus \(0\.10, escalate: .*\) for this session, was sonnet/)
+})
+
+test('Jev unreachable: falls back to opus and says why', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  on('http.fetch', async () => {
+    throw new Error('network down')
+  })
+  const { set, lines } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(set).toEqual(['opus'])
+  expect(lines[0]).toMatch(/^jev → opus \(0\.00, escalate: Jev unavailable: .+\) for this session, was sonnet/)
+})
+
+test('Jev answers HTTP 500: falls back to opus and says why', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  on('http.fetch', async () => ({ value: { status: 500, ok: false, headers: {}, text: 'boom' } }))
+  const { set, lines } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(set).toEqual(['opus'])
+  expect(lines[0]).toMatch(/^jev → opus \(0\.00, escalate: Jev unavailable: Jev returned 500\) for this session, was sonnet/)
+})
+
+test('no key in the environment: says so plainly, no Jev call, model left alone', async ($, on) => {
+  mock.env(on, {})
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set, lines } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(sent.length).toBe(0)
+  expect(set).toEqual([])
+  expect(lines[0]).toContain('jev: no API key, model unchanged')
+})
+
+test('after /clear: the next prompt routes again even though turns() is already 1, the one after does not', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set } = session(on, 1)
+  on('session.end', async (_$, e) => ({ sessionId: e.sessionId }) as never)
+
+  await $.session.end({ reason: 'clear', sessionId: 'old', resume: { id: 'old' } } as never)
+  await $.prompt.submit(submit('rename foo to bar'))
+  await $.prompt.submit(submit('and the tests too'))
+
+  expect(sent.length).toBe(1)
+  expect(set).toEqual(['haiku'])
+})
+
+test('already on the right model: still says so', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { lines } = session(on, 0, 'haiku')
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(lines).toEqual(['jev → haiku (0.97) for this session · /model to change'])
+})
+
+test('haiku under its higher bar: steps up to sonnet, not all the way to opus', async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  // conf (0.88 - 1/3) / (2/3) = 0.82: above the 0.75 act band, under the 0.9 haiku bar.
+  jev(on, { haiku: 0.88, sonnet: 0.08, opus: 0.04 })
+  const { set, lines } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(set).toEqual(['sonnet'])
+  expect(lines[0]).toBe('jev → sonnet (haiku 0.82 is under the 0.90 bar) for this session · /model to change')
+})
+
+test('the haiku bar is an option', { options: { haikuConfidence: 0.8 } }, async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  jev(on, { haiku: 0.88, sonnet: 0.08, opus: 0.04 })
+  const { set } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(set).toEqual(['haiku'])
+})
+
+test('haiku off: jev is only asked about sonnet and opus', { options: { allowHaiku: false } }, async ($, on) => {
+  mock.env(on, { TYPESAFE_API_KEY: 'k' })
+  const sent = jev(on, { sonnet: 0.95, opus: 0.05 })
+  const { set } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(Object.keys((sent[0]!.questions.model as { criteria: object }).criteria)).toEqual(['sonnet', 'opus'])
+  expect(set).toEqual(['sonnet'])
+})
+
+test('API key from the plugin option: no env needed, sent as the bearer token', { options: { apiKey: 'from-option' } }, async ($, on) => {
+  mock.env(on, {})
+  const sent = jev(on, { haiku: 0.98, sonnet: 0.01, opus: 0.01 })
+  const { set } = session(on, 0)
+
+  await $.prompt.submit(submit('rename foo to bar'))
+
+  expect(sent.map(r => r.authorization)).toEqual(['Bearer from-option'])
+  expect(set).toEqual(['haiku'])
+})
