@@ -33,7 +33,7 @@ export const register: Register = (on, options) => {
     const mock = await $.env.get('JEV_MOCK')
     if (!key && mock !== '1') {
       $.ui.log(
-        'jev: no API key, model unchanged. Set "TypeSafe API key" in /plugin → jev-model-router, or export TYPESAFE_API_KEY before starting claude',
+        'jev: no API key, model unchanged. Set "TypeSafe API key" in /plugin → jev-model-picker, or export TYPESAFE_API_KEY before starting claude',
       )
       return next(e)
     }

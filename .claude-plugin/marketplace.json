@@ -5,8 +5,8 @@
   },
   "plugins": [
     {
-      "name": "jev-model-router",
-      "source": "./plugins/jev-model-router"
+      "name": "jev-model-picker",
+      "source": "./plugins/jev-model-picker"
     },
     {
       "name": "ollama-agent",

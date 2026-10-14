@@ -16,9 +16,9 @@ PRs are welcome. Every PR must include a security scan result from [NVIDIA Skill
 
 | Plugin | Description | Status
 |---|---|---|
-| [jev-model-router](plugins/jev-model-router/) | Picks the session model (haiku/sonnet/opus) from the first prompt of a fresh context, using the JEV decision model | POC
+| [jev-model-picker](plugins/jev-model-picker/) | My name is Jev. I pick your model once, at session start and after /clear. No prompts, no mid-session switches, cache stays warm. | POC
 
-**Privacy:** `jev-model-router` sends the first prompt of each new session to a third-party API (TypeSafe) by default when a TypeSafe key is configured. See [Data and privacy](plugins/jev-model-router/README.md#data-and-privacy).
+**Privacy:** `jev-model-picker` sends the first prompt of each new session to a third-party API (TypeSafe) by default when a TypeSafe key is configured. See [Data and privacy](plugins/jev-model-picker/README.md#data-and-privacy).
 
 ## Installing
 
@@ -28,7 +28,7 @@ Add this repo as a marketplace once, then install what you need:
 
 ```
 /plugin marketplace add GrandjeanIo/agent-lib
-/plugin install jev-model-router@agent-lib
+/plugin install jev-model-picker@agent-lib
 /plugin install ollama-agent@agent-lib
 ```
 

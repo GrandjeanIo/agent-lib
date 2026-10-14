@@ -1,20 +1,26 @@
-# jev-model-router
+# jev-model-picker
 
-A Claude Code mod that lets JEV pick the model on the **first prompt of a fresh context**:
-a new session, or right after `/clear`. Mid-session prompts never change the model.
+A Claude Code mod that lets JEV pick the model once per context: at session start and after
+`/clear`. Mid-session prompts never change the model, so the cache stays warm.
+
+- **Session start:** the pick runs on your first prompt of a new session. The mod needs the prompt
+  text to classify it, so nothing is picked before you type.
+- **After `/clear`:** the next prompt you submit is picked again, as a fresh context.
+- **Every other prompt:** the model is left alone.
 
 ```
-first prompt ──► JEV prompt-router (model: haiku | sonnet | opus) ──► /config model row
-                                                                      status line: "jev → sonnet"
+first prompt (or first after /clear) ──► JEV prompt-router (haiku | sonnet | opus) ──► /config model row
+                                                                                       status line: "jev → sonnet"
 ```
 
-The first turn adds a line to the transcript, so you see the pick before the cache grows and
-can still `/model` up cheaply:
+The pick writes the `/config` model row and applies to that first turn. The transcript gets a
+line with the result, so you see the pick before the cache grows and can still `/model` up cheaply:
 
 ```
 jev → haiku (0.97) for this session, was sonnet · /model to change
 jev → sonnet (haiku 0.82 is under the 0.90 bar) for this session · /model to change
-jev → opus (0.10, escalate: sonnet (p=0.40), conf 0.10 -> escalate) for this session · /model to change
+jev → sonnet (0.75, confirm: <JEV's reason>) for this session · /model to change
+jev → opus (0.10, escalate: <JEV's reason>) for this session · /model to change
 ```
 
 - **act**: JEV is sure. The line shows its confidence.
@@ -27,7 +33,7 @@ jev → opus (0.10, escalate: sonnet (p=0.40), conf 0.10 -> escalate) for this s
 
 ```
 /plugin marketplace add GrandjeanIo/agent-lib
-/plugin install jev-model-router@agent-lib
+/plugin install jev-model-picker@agent-lib
 ```
 
 Pick a scope. The install screen asks for the options below.
@@ -44,7 +50,7 @@ and don't set `TYPESAFE_API_KEY`, or set `JEV_MOCK=1`. See [Data and privacy](#d
 | Route down to Haiku (`allowHaiku`) | on | Turn it off and JEV picks only between Sonnet and Opus (the claude-jev approach). |
 | Haiku confidence bar (`haikuConfidence`) | 0.9 | How sure JEV must be before downgrading to Haiku. |
 
-Change the API key later in `/plugin` → jev-model-router → configure. The other two options are rows in `/config`.
+Change the API key later in `/plugin` → jev-model-picker → configure. The other two options are rows in `/config`.
 
 ## Develop
 
@@ -52,10 +58,10 @@ Run from the agent-lib repo root:
 
 ```sh
 export TYPESAFE_API_KEY=...       # or JEV_MOCK=1 for the offline keyword mock
-claude --plugin-dir plugins/jev-model-router
+claude --plugin-dir plugins/jev-model-picker
 
 claude plugin validate .                     # marketplace + manifest + module
-claude plugin test plugins/jev-model-router
+claude plugin test plugins/jev-model-picker
 ```
 
 `npx tsc --noEmit` type-checks against `.claude-plugin/types/`. That folder is gitignored and
@@ -93,7 +99,7 @@ belongs to TypeSafe; check their terms before you use it on private code.
 
 [NVIDIA Skillspector](https://github.com/nvidia/skillspector) v2.12.0 with the `claude_cli` LLM
 provider (all LLM analyzer calls succeeded). The scan covered the shipped files only: the tracked
-and non-ignored files under `plugins/jev-model-router/`, exported to a clean folder. Scanning the
+and non-ignored files under `plugins/jev-model-picker/`, exported to a clean folder. Scanning the
 working folder directly also reads the gitignored `.claude-plugin/types/` declarations, which are
 not shipped, so it is not used as the result.
 
