@@ -69,7 +69,7 @@ covered by an `allow` rule and hit by no `deny` rule:
 Report each item as covered (name the rule) or not.
 
 `autoMode` entries (the classifier's own prose rules) are read only from
-`~/.claude/settings.json`, managed settings and `--settings`, never from
+the user's own settings, managed settings and `--settings`, never from
 the repo's `.claude/settings*.json`. Don't write them into the repo. If
 a merge is still denied with the allow rule in place, tell the user to
 check `claude auto-mode config` and add a trust entry in their user
