@@ -70,6 +70,7 @@ folder). The same for every repo. Nothing project-specific goes here.
 | `skills/next-pr` | Dispatcher, review loop |
 | `skills/tdd-implement` | Test-first implementation, called by `task-implementer` |
 | `skills/to-intent`, `to-plan`, `to-ticket` | Human-in-the-loop scoping steps 1 to 3 |
+| `skills/setup` | Sets up or re-checks a repo for the pipeline |
 | `agents/task-implementer.md` | Worker: ticket or fix → PR. Defines the concurrency model. |
 | `agents/pr-reviewer.md` | Worker: PR → merge, changes or escalation |
 | `docs/pipeline-housekeeping.md` | Sweeps and checks run by the dispatchers |
@@ -84,7 +85,7 @@ Per repo. Required unless marked optional.
 
 | File | Role |
 | --- | --- |
-| `docs/agents/project.md` | Copy `templates/project.md` from the plugin. All config keys (`LINEAR_TEAM`, `SETUP`, `VERIFY`, `SPEC_DIR`, lanes, escalation paths) and project rules. Read it first. |
+| `docs/agents/project.md` | Written by `/feature-factory:setup` from `templates/project.md`. All config keys (`LINEAR_TEAM`, `SETUP`, `VERIFY`, `SPEC_DIR`, lanes, escalation paths) and project rules. Read it first. |
 | `CONTEXT.md` | Glossary. `project.md` says if it lives elsewhere. |
 | `docs/adr/` | Decisions. Reviewers cite them in findings. |
 | `<SPEC_DIR>` | Intents: `intent.md`, `plan.md`, optional `spec.md`, a `template/` and a completed folder |

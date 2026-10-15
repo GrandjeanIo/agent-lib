@@ -33,6 +33,10 @@ Install at project scope in each repo that uses the pipeline.
 
 ## Set up a repo
 
+Run `/feature-factory:setup` from the repo root. It checks everything below, asks for the config
+values, and fixes what it can after you approve the change list. Run it again any time to re-check.
+The steps it covers:
+
 1. Copy [`templates/project.md`](templates/project.md) to `docs/agents/project.md` and fill every
    row. The skills and agents read it first.
 2. Add the Linear MCP server named by `LINEAR_MCP` to `.mcp.json`, then run `/mcp` to authenticate.
@@ -69,6 +73,7 @@ claude
 | `skills/to-intent`, `to-plan`, `to-ticket` | Scoping stages 1 to 3. `to-plan` and `to-ticket` run only when you type them. |
 | `skills/next-ticket`, `next-pr` | Dispatchers, run by `/loop` |
 | `skills/tdd-implement` | Test-first implementation, called by `task-implementer` |
+| `skills/setup` | Sets up or re-checks a repo. Runs only when you type it. |
 | `agents/task-implementer.md`, `agents/pr-reviewer.md` | Workers |
 | `docs/` | Reference docs: the pipeline map, housekeeping sweeps, Linear operations, labels, reviewer identity, domain docs |
 | `templates/project.md` | The repo config template |
@@ -88,7 +93,7 @@ The plugin talks only to GitHub and Linear, through your `gh` login, the reviewe
 ## Security scan
 
 [NVIDIA Skillspector](https://github.com/nvidia/skillspector) v2.12.0 with the `claude_cli` LLM
-provider (the LLM analyzers completed). The scan covered the shipped files only: the 19 files under
+provider (the LLM analyzers completed). The scan covered the shipped files only: the 20 files under
 `plugins/feature-factory/`, exported to a clean folder without `.DS_Store`.
 
 | Result | Value |
@@ -97,7 +102,7 @@ provider (the LLM analyzers completed). The scan covered the shipped files only:
 | Severity | LOW |
 | Recommendation | CAUTION |
 | Issues | 1 MEDIUM: `BH1` (the bundled hook) |
-| Coverage | 94.7%: 18 of 19 files fully inspected, 1 partial |
+| Coverage | 95.0%: 19 of 20 files fully inspected, 1 partial |
 | Degraded analyzers | `bundled_execution_surface` |
 
 **The scan is not complete.** The one partial file is `hooks/hooks.json`, for the same reason as in
