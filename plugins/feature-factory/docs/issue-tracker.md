@@ -48,7 +48,7 @@ an API key from that workspace avoids the browser flow:
   the merged PR.
 - **Blockers**: Linear's native "blocked by" relations. A ticket is
   unblocked when every blocker is `completed` or `canceled`.
-  **Sub-issues**: Linear parent/child.
+- **Sub-issues**: Linear parent/child.
 
 ## The agent queue
 

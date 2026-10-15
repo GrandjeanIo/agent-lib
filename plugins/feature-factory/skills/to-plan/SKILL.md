@@ -48,7 +48,9 @@ ideally one. Confirm them with the user.
   one place paths belong.
 - **Order of work** — numbered sequence of concrete steps.
 - **Testing seams** — where the tests bite (external behaviour, not
-  internals), which modules get tested, prior art in the codebase. Use the /test-audit skill to audit the proposed tests, to avoid overly testing plans.
+  internals), which modules get tested, prior art in the codebase.
+  Prefer the fewest tests that prove the criteria; if a test-audit
+  skill is available, run it over the proposed tests.
 - **Risks** — what could break, rate-limit or surprise.
 - **Proof** — which tests, which manual check.
 - **Out of scope** — including any intent.md open question this plan

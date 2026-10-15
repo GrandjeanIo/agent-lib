@@ -92,7 +92,7 @@ If `project.md` sets `REVIEWER_LOGIN` and `gh api user -q .login`
 differs from it, stop and report both logins; point to
 `${CLAUDE_PLUGIN_ROOT}/docs/review-identity.md`.
 
-Re-check it is still `needs-review` with no reviewer assigned. If not →
+Re-check it is still `needs-review` with no reviewer requested. If not →
 step 1. Claim before reading further:
 `gh pr edit <n> --add-reviewer "$(gh api user -q .login)"`. `gh` does
 not resolve `@me` for `--add-reviewer`.

@@ -48,8 +48,8 @@ this file.
    - **New tickets.** Take unassigned, unblocked `ready-for-agent`
      tickets oldest `createdAt` first. Add one to the batch only if its
      `## Touches` is disjoint from the occupied set **and** from every
-     ticket already in the batch, and in-flight + batched tickets stays
-     below `MAX_IN_FLIGHT`. Each one you add joins the occupied set.
+     ticket already in the batch, and in-flight + batched tickets does
+     not exceed `MAX_IN_FLIGHT`. Each one you add joins the occupied set.
      A ticket that counts as `**` (no `## Touches`, or one that
      collides with `PIPELINE_PATHS`; `${CLAUDE_PLUGIN_ROOT}/agents/task-implementer.md` §
      Concurrency): take it only if nothing is in flight and the batch
@@ -87,6 +87,9 @@ this file.
 
    Use the Agent tool with `subagent_type: feature-factory:task-implementer`,
    never the Skill tool: each implementer needs its own context to make and remove its own worktree.
+   Don't pass `isolation: "worktree"`: the implementer makes its own
+   worktree under `.worktrees/`, and creating one from inside a harness
+   worktree is the nested-worktree case the sandbox blocks.
 
 9. **Report each implementer's result as-is**, one line per item: PR
    opened, `changes-requested` PR handed back, or why it stopped. Then

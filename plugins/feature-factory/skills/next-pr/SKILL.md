@@ -56,9 +56,9 @@ sweeps and claim nothing; they would act as the wrong account.
    (several Agent tool calls in one response) so they run concurrently.
    Each prompt is `Dispatched: PR #<n>. Already claimed as reviewer by
    the dispatcher.` Use the Agent tool with `subagent_type:
-   feature-factory:pr-reviewer`, never the Skill tool: each
-   reviewer needs its own isolated (harness) worktree to check out and
-   test its PR; it uses that one and makes no second.
+   feature-factory:pr-reviewer` and `isolation: "worktree"`, never the
+   Skill tool: each reviewer needs its own isolated (harness) worktree
+   to check out and test its PR; it uses that one and makes no second.
 
    If a reviewer stopped because approving failed, or reported `Merge
    blocked` (the harness denied the merge), send a push notification
