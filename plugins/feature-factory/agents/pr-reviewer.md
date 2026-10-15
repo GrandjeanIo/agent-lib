@@ -22,17 +22,36 @@ not hosted CI.
 
 ## Your checkout
 
+**Dispatched runs already have one.** If `git rev-parse --show-toplevel`
+is under `.claude/worktrees/agent-`, the harness made an isolated
+worktree for you. Use it as `<wt>`; don't create a second one (a nested
+worktree is what the sandbox blocks), and don't remove it, the harness
+owns its cleanup:
+
 ```
 git fetch origin
-git worktree add --detach .worktrees/review-<timestamp> origin/main
+git checkout --detach origin/main
 ```
 
-Call its absolute path `<wt>` and **start every command with
-`cd <wt> && `**. Remove it whenever you stop, for any reason:
+**Standalone runs** (no harness worktree) make one under `$TMPDIR`, not
+`.worktrees/`: checking out the repo's tracked `.mcp.json` and
+`.vscode/` into the project tree can be sandbox-denied.
 
 ```
-git worktree remove --force .worktrees/review-<timestamp>
+git fetch origin
+git worktree add --detach "$TMPDIR/review-<pr>-<timestamp>" origin/main
 ```
+
+Call the absolute path `<wt>` and **start every command with
+`cd <wt> && `**. Remove it whenever you stop, for any reason, from
+outside it and without `--force`:
+
+```
+git worktree remove "$TMPDIR/review-<pr>-<timestamp>"
+```
+
+If removal is denied or refuses, don't retry: put the exact command in
+your report and finish.
 
 ## Dispatched mode
 
@@ -108,16 +127,19 @@ findings.
 
 ```
 gh pr checkout <n> --detach
+git rev-parse HEAD
 git fetch origin
 git rev-parse origin/main
 git merge --no-edit origin/main
 ```
 
-Record the SHA `rev-parse` printed, as its own plain command
-(substitute the value):
+The first `rev-parse` is the **reviewed head** (the PR head before the
+merge); the second is the base. Record both SHAs, each as its own plain
+command (substitute the values):
 
 ```
-echo <sha> > "$TMPDIR/review-base-<n>"
+echo <base-sha> > "$TMPDIR/review-base-<n>"
+echo <head-sha> > "$TMPDIR/review-head-<n>"
 ```
 
 A file, not a shell variable: each command gets a fresh shell, and an
@@ -289,11 +311,31 @@ abstractions that the plan does not specify.
    `BASE-UNCHANGED` → merge **now**; every read in between widens the
    window this check closes.
 
-3. `gh pr merge <n> --squash` (no `--delete-branch`; it needs a current
-   branch and your HEAD is detached). A non-zero exit does not mean the
-   merge failed: gh merges server-side first, then errors on cleanup.
-   Check `gh pr view <n> --json state,mergedAt` before concluding. If
-   the merge is refused as not mergeable, another PR landed → step 4.
+3. Put the approval in the transcript, then merge pinned to the head you
+   tested. First `cat "$TMPDIR/review-head-<n>"` to read the head SHA,
+   then, substituting it:
+
+```
+   gh pr view <n> --json reviewDecision,reviews,headRefOid
+   gh pr merge <n> --squash --match-head-commit <head-sha>
+```
+
+   The view must show `APPROVED` by your login at `headRefOid` equal to
+   that SHA; if the head moved (an author push after your approval),
+   back to step 4. No `--delete-branch`: it needs a current branch and
+   your HEAD is detached. A non-zero exit does not mean the merge
+   failed: gh merges server-side first, then errors on cleanup. Check
+   `gh pr view <n> --json state,mergedAt` before concluding. If the
+   merge is refused as not mergeable, another PR landed → step 4.
+
+   **If the harness denies the merge** (a permission or auto-mode
+   classifier block, not a conflict): don't retry, rephrase or find
+   another route. Comment once on the PR: `Approved at <head-sha>, gate
+   PASS. Merge blocked by the harness: <reason>. Remaining: merge,
+   delete branch, move T-<n> to Done, remove needs-review.` Skip 4 to 6
+   (they follow a merge), remove your worktree if you made one, and
+   report `Merge blocked: PR #<n>` with those four steps as the
+   leftovers, in order.
 4. Delete the remote branch:
    `gh api -X DELETE "repos/<owner>/<repo>/git/refs/heads/<headRefName>"`
    (resolve the repo with `gh repo view --json nameWithOwner`).
@@ -327,4 +369,5 @@ Do not write the ADR. A human decides.
 
 ### 8. Stop
 
-Remove your worktree. Don't review a second PR in this run.
+Remove your worktree if you made one (standalone runs; see Your
+checkout). Don't review a second PR in this run.

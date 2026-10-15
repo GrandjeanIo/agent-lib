@@ -50,12 +50,30 @@ covered by an `allow` rule and hit by no `deny` rule:
 - `gh`: `gh pr`, `gh api`, `gh repo view`, `gh label` (one `Bash(gh *)`
   covers all four)
 - `Bash(jq *)`: the reviewer filters PR lists with it
+- `gh pr merge`: **required**, and the one most likely to stall a
+  tick. A single `Bash(gh *)` covers it, as does `Bash(gh pr merge *)`.
+  In auto mode a narrow allow rule is resolved before the classifier
+  runs; without one the classifier can deny the merge as "Merge Without
+  Review" because the approval came from a subagent. Flag it to the
+  developer as a **required fix** (not just "not covered") if no allow
+  rule matches, or if the command is also under `ask` or `deny`. Flags
+  before the subcommand (`gh -R x pr merge`) don't match; the reviewer
+  doesn't use them.
+- `Bash(git worktree *)`: only needed for standalone reviewer runs;
+  dispatched runs use the harness worktree
 - the exact `SETUP`, `VERIFY` and `RECREATE` commands from
   `project.md`, as written there (`Bash(scripts/gate.sh *)` for
   `scripts/gate.sh HEAD`)
 - `mcp__<LINEAR_MCP>__*`
 
 Report each item as covered (name the rule) or not.
+
+`autoMode` entries (the classifier's own prose rules) are read only from
+`~/.claude/settings.json`, managed settings and `--settings`, never from
+the repo's `.claude/settings*.json`. Don't write them into the repo. If
+a merge is still denied with the allow rule in place, tell the user to
+check `claude auto-mode config` and add a trust entry in their user
+settings; that is a to-do for them, not a fix to apply.
 
 ## 2. Ask
 

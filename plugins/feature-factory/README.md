@@ -87,6 +87,11 @@ squash-merge and delete merged branches. The review loop merges only after its o
 on the merge result and its account has approved. Changes to auth, `SENSITIVE_PATHS` and
 `PIPELINE_PATHS` are flagged for manual review and never merged by an agent.
 
+In auto mode the classifier can still deny a merge. `/feature-factory:setup` checks for a narrow
+`Bash(gh pr merge *)` allow rule, which Claude Code resolves before the classifier. If a merge is denied
+anyway, the reviewer comments on the PR and stops, and the dispatcher sends a push notification with the
+leftover steps. Classifier (`autoMode`) entries can only live in user or managed settings, not the repo.
+
 The plugin talks only to GitHub and Linear, through your `gh` login, the reviewer account's `gh` login
 (`GH_CONFIG_DIR`), and the Linear MCP server you configure. It has no other network calls.
 

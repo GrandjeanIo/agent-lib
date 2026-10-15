@@ -32,9 +32,9 @@ or approve it. If both loops run as the same account,
    identity. Don't export `GH_CONFIG_DIR` there.
 
 `GH_CONFIG_DIR` selects `gh`'s login for every `gh` call made in that
-process tree, including the worktrees `pr-reviewer` makes under
-`.worktrees/`, so the two loops stay on separate identities on one
-machine. Use `GH_CONFIG_DIR`, not `gh auth switch`: switch flips a
+process tree, including the harness worktrees `pr-reviewer` runs in
+(and the `$TMPDIR` worktree it makes when run standalone), so the two
+loops stay on separate identities on one machine. Use `GH_CONFIG_DIR`, not `gh auth switch`: switch flips a
 single global active account and would race if both loops run at once.
 
 Set `REVIEWER_LOGIN` in `project.md` to the account's login. `next-pr`

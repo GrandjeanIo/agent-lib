@@ -57,11 +57,13 @@ sweeps and claim nothing; they would act as the wrong account.
    Each prompt is `Dispatched: PR #<n>. Already claimed as reviewer by
    the dispatcher.` Use the Agent tool with `subagent_type:
    feature-factory:pr-reviewer`, never the Skill tool: each
-   reviewer needs its own isolated worktree to check out and test its
-   PR.
+   reviewer needs its own isolated (harness) worktree to check out and
+   test its PR; it uses that one and makes no second.
 
-   If a reviewer stopped because approving failed, send a push
-   notification with the reason, as in step 3.
+   If a reviewer stopped because approving failed, or reported `Merge
+   blocked` (the harness denied the merge), send a push notification
+   with the PR number and reason, as in step 3. A blocked merge leaves
+   the PR approved but open; the notification is how a person finds it.
 
 5. **Decide whether the sweeps run this tick.** They do if any reviewer
    ran in step 4, or if the tick's minute past the hour is under 10
@@ -81,7 +83,8 @@ sweeps and claim nothing; they would act as the wrong account.
 7. **Report.** If step 1 skipped the spawn, the first line is the
    pre-check's `Skipped spawn: <reason>`, verbatim, then any review
    claims the sweep released. Otherwise one line
-   per reviewer, as-is (merged, changes requested, escalated, held),
+   per reviewer, as-is (merged, changes requested, escalated, held,
+   merge blocked with its leftover steps),
    then `Reviewed <k>. Left: <m> (<reason: held | MAX_REVIEW_SPAWN |
    claimed elsewhere>).` Then what the sweeps found, or `Sweeps skipped
    this tick.`
