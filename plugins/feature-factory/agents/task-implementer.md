@@ -34,19 +34,25 @@ A tick that claims nothing is a normal outcome, not a failure.
 
 ## Your checkout
 
-Work in your own worktree so sessions never share a working tree:
+Work in your own worktree so sessions never share a working tree. Make
+it under `$TMPDIR`, not `.worktrees/`: checking out the repo's tracked
+`.mcp.json` and `.vscode/` into the project tree can be sandbox-denied.
 
 ```
 git fetch origin
-git worktree add --detach .worktrees/impl-<timestamp> origin/main
+git worktree add --detach "$TMPDIR/impl-<timestamp>" origin/main
 ```
 
 Call its absolute path `<wt>` and **start every command with
-`cd <wt> && `**. Remove it whenever you stop, for any reason:
+`cd <wt> && `**. Remove it whenever you stop, for any reason, from
+outside it:
 
 ```
-git worktree remove --force .worktrees/impl-<timestamp>
+git worktree remove --force "$TMPDIR/impl-<timestamp>"
 ```
+
+If removal is denied or refuses, don't retry: put the exact command in
+your report and finish.
 
 Delete any local branch you created once it is pushed.
 
@@ -215,7 +221,8 @@ grep -q '^Closes T-' "$TMPDIR/pr-body.md" && grep -q '^## Touches' "$TMPDIR/pr-b
   && gh pr create --title "T-<n>: <title>" --label needs-review --body-file "$TMPDIR/pr-body.md"
 ```
 
-Confirm with `gh pr view <n> --json body` that both landed. `## Touches`
+Confirm with `gh pr view <n> --json body` that both landed. Then move
+`T-<n>` to In Review in Linear and comment the PR URL on it. `## Touches`
 is the ticket's block verbatim, plus any globs drift added; never
 narrower. It is a reservation, not a change log: the reviewer reads the
 diff for what changed, and the lane must hold through any fix loop. A

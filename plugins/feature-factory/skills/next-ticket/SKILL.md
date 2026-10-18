@@ -88,7 +88,7 @@ this file.
    Use the Agent tool with `subagent_type: feature-factory:task-implementer`,
    never the Skill tool: each implementer needs its own context to make and remove its own worktree.
    Don't pass `isolation: "worktree"`: the implementer makes its own
-   worktree under `.worktrees/`, and creating one from inside a harness
+   worktree under `$TMPDIR`, and creating one from inside a harness
    worktree is the nested-worktree case the sandbox blocks.
 
 9. **Report each implementer's result as-is**, one line per item: PR

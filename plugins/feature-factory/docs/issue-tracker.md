@@ -44,6 +44,8 @@ an API key from that workspace avoids the browser flow:
 - **Claim**: assign to yourself and move to In Progress. This is the
   first write a session makes, before reading anything further.
 - **Release**: unassign, move back to Todo, comment why.
+- **In review**: move to In Review once its PR is open. The PR
+  carries the ticket from here until merge; `Closes T-<n>` moves it to Done.
 - **Close**: move to Done (Canceled for `wontfix`) with a comment naming
   the merged PR.
 - **Blockers**: Linear's native "blocked by" relations. A ticket is

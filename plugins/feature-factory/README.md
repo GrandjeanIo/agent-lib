@@ -82,7 +82,7 @@ claude
 ## What it does to your repo, GitHub and Linear
 
 The loops act without a person present. They assign and move Linear tickets, comment on them,
-create branches and worktrees (`.worktrees/`), push, open PRs, edit PR labels and reviewers, approve,
+create branches and worktrees (under `$TMPDIR`), push, open PRs, edit PR labels and reviewers, approve,
 squash-merge and delete merged branches. The review loop merges only after its own gate run passes
 on the merge result and its account has approved. Changes to auth, `SENSITIVE_PATHS` and
 `PIPELINE_PATHS` are flagged for manual review and never merged by an agent.
