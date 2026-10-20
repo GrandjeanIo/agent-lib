@@ -1,6 +1,6 @@
 ---
 name: task-implementer
-description: Implements one `ready-for-agent` Linear ticket, or fixes one `changes-requested` PR, test-first inside its declared touch set, and opens or hands back a PR labelled `needs-review`. Normally dispatched by `/next-ticket` with the item already claimed; run alone, it picks and claims its own work. Never merges.
+description: Implements one `ready-for-agent` Linear ticket (state Todo), or fixes one `changes-requested` PR, test-first inside its declared touch set, and opens or hands back a PR labelled `needs-review`. Normally dispatched by `/next-ticket` with the item already claimed; run alone, it picks and claims its own work. Never merges.
 ---
 
 # Task Implementer
@@ -56,6 +56,15 @@ your report and finish.
 
 Delete any local branch you created once it is pushed.
 
+The worktree shares the main repo's `.git/config` and `.git/hooks`,
+which the sandbox protects; nothing in this run may write them. So:
+`--no-track` on every checkout, `git push origin HEAD` rather than
+`push -u`, and `--head` on `gh pr create`. A `SETUP` step that writes
+them (`core.hooksPath`, a hooks installer) is the project's bug, not
+yours: if `SETUP` fails only there, continue, and put
+`SETUP writes .git/config: <command>` in your report. Don't retry it
+unsandboxed.
+
 ## Dispatched mode
 
 `/next-ticket` claims a batch and spawns one implementer per item. A
@@ -100,7 +109,8 @@ Claim before reading: `gh pr edit <n> --add-label wip`. If the label is
 already there, someone beat you → step 0.
 
 ```
-gh pr checkout <n>
+gh pr checkout <n> --detach
+git checkout -B <headRefName> --no-track
 SETUP
 ```
 
@@ -119,10 +129,12 @@ exactly as step 3 describes. Sort the review points:
 The ticket's acceptance criteria still have to hold and `VERIFY` still
 has to pass (`tdd-implement` step 3).
 
-Main has moved. Rebase, rerun `VERIFY`, push `--force-with-lease`:
+Main has moved. Rebase, rerun `VERIFY`, then push:
 
 ```
 git fetch origin && git rebase origin/main
+VERIFY
+git push --force-with-lease origin HEAD:<headRefName>
 ```
 
 If the rebase conflicts beyond a trivial fixup: abort, comment on the PR
@@ -143,19 +155,20 @@ other: say which PR or ticket holds the lane and stop.
 
 Otherwise, from the queue:
 
-1. Keep issues with no assignee.
-2. Keep issues that are unblocked (`${CLAUDE_PLUGIN_ROOT}/docs/issue-tracker.md`).
-3. Drop issues whose `## Touches` collides with the occupied set.
-4. Sort by `createdAt` ascending; take the first.
+1. Keep issues in state Todo (Backlog is never a candidate).
+2. Keep issues with no assignee.
+3. Keep issues that are unblocked (`${CLAUDE_PLUGIN_ROOT}/docs/issue-tracker.md`).
+4. Drop issues whose `## Touches` collides with the occupied set.
+5. Sort by `createdAt` ascending; take the first.
 
 If nothing qualifies, say which condition emptied the list, and stop.
 Never fall back to a blocked, assigned or colliding ticket.
 
 ### 2. Validate and claim
 
-Re-fetch and re-check all three conditions: still unblocked, still
-unassigned, `## Touches` still disjoint from a fresh occupied set. If
-any fails → step 1.
+Re-fetch and re-check all four conditions: still in Todo, still
+unblocked, still unassigned, `## Touches` still disjoint from a fresh
+occupied set. If any fails → step 1.
 
 Claim it in Linear (assign to yourself, move to In Progress). This is
 the session's first write; do it before reading further.
@@ -172,7 +185,7 @@ truth. Note the `## Touches` globs: they are your boundary for this run.
 
 ```
 git fetch origin
-git checkout -B feat/<t>-<n>-<short-slug> origin/main
+git checkout -B feat/<t>-<n>-<short-slug> --no-track origin/main
 SETUP
 ```
 
@@ -208,6 +221,9 @@ Compare against your `## Touches` globs. Files outside them are
 - **Drift into another lane** — stop. Don't push. Release the ticket in
   Linear with a comment naming the file and the PR holding it, and
   report. The slice needs a human, not a race to merge.
+- **Drift into a free file under `SENSITIVE_PATHS` or `PIPELINE_PATHS`**
+  — allowed: widen `## Touches`, and say in the description and in your
+  report that the PR will escalate to a person because of it.
 
 If the diff adds or renames a file under any `SHARED_GLOBS` entry,
 `## Touches` must declare that whole glob. If it edits or removes one,
@@ -218,7 +234,9 @@ the PR only if the two required lines are present:
 
 ```
 grep -q '^Closes T-' "$TMPDIR/pr-body.md" && grep -q '^## Touches' "$TMPDIR/pr-body.md" \
-  && gh pr create --title "T-<n>: <title>" --label needs-review --body-file "$TMPDIR/pr-body.md"
+  && git push origin HEAD \
+  && gh pr create --head feat/<t>-<n>-<short-slug> --title "T-<n>: <title>" \
+       --label needs-review --body-file "$TMPDIR/pr-body.md"
 ```
 
 Confirm with `gh pr view <n> --json body` that both landed. Then move

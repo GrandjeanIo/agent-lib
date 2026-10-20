@@ -9,7 +9,7 @@
 | `LINEAR_MCP` | `linear-work` | Name of the Linear MCP server in this repo's `.mcp.json`. Name it after the workspace, not `linear-server`. |
 | `LINEAR_TEAM` | `ABC` | Linear team key. Tickets are `ABC-<n>`, branches `feat/abc-<n>-<slug>`. |
 | `REPO_LABEL` | — | Linear label that scopes the queue to this repo, when a team spans several repos. List each label when the project spans repos, and say which repo depends on which. |
-| `SETUP` | `make install` | Installs dependencies in a fresh worktree. Must be idempotent. |
+| `SETUP` | `make install` | Installs dependencies in a fresh worktree. Must be idempotent, and must not write `.git/config` or `.git/hooks`: worktrees share them with the main repo and the sandbox protects them. Put hook installation in a separate target that people run. |
 | `VERIFY` | `make verify` | The gate. Passes only on exit 0. It runs the PR's code, so it must run sandboxed, without the reviewer's `gh` login (`review-identity.md`). Say whether it reads committed content only (then commit first) and name its pass line if it prints one, for example `gate: PASS <sha>`. |
 | `SPEC_DIR` | `docs/intent/<NNN-slug>/` | Where intents live: `intent.md`, `plan.md`, optional `spec.md`. Name the template folder and the completed folder (`implemented/` or `shipped/`). If intents live outside this repo, say how a ticket's `Source:` path maps onto this checkout. |
 | `REVIEWER_LOGIN` | — | Optional. GitHub login of the review-loop account (`review-identity.md`). When set, `next-pr` stops before doing anything if the session is logged in as another account. |

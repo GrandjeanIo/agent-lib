@@ -46,7 +46,9 @@ this file.
      one batch item. Its lane is already occupied by the PR itself, so
      it neither adds to the in-flight count nor needs a free lane.
    - **New tickets.** Take unassigned, unblocked `ready-for-agent`
-     tickets oldest `createdAt` first. Add one to the batch only if its
+     tickets in state Todo (Backlog is never a candidate;
+     `${CLAUDE_PLUGIN_ROOT}/docs/issue-tracker.md` § The agent queue),
+     oldest `createdAt` first. Add one to the batch only if its
      `## Touches` is disjoint from the occupied set **and** from every
      ticket already in the batch, and in-flight + batched tickets does
      not exceed `MAX_IN_FLIGHT`. Each one you add joins the occupied set.
@@ -93,10 +95,22 @@ this file.
 
 9. **Report each implementer's result as-is**, one line per item: PR
    opened, `changes-requested` PR handed back, or why it stopped. Then
-   one count line: `Spawned <k>: <f> fixes, <t> tickets. Left in queue:
-   <m> (<reason: lane collision | MAX_IN_FLIGHT | MAX_SPAWN | blocked>).`
-   A tick that claims nothing is a normal tick. Don't retry with relaxed
-   criteria.
+   the count line, and one line per ticket left in the queue naming
+   what holds it:
+
+   ```
+   Spawned <k>: <f> fixes, <t> tickets. Left in queue: <m>.
+   - T-<n>: lane held by PR #<p> (`<glob>`)   # or: by T-<q> in this batch
+   - T-<n>: no `## Touches` (counts as `**`)
+   - T-<n>: blocked by T-<b>
+   - T-<n>, T-<n>: MAX_IN_FLIGHT              # or: MAX_SPAWN
+   ```
+
+   Past ten tickets, list the first ten and add `+<r> more`, but always
+   list every ticket with no `## Touches`: that is the one thing a
+   person fixes in a minute. Backlog tickets are not in the queue and
+   are not counted. A tick that claims nothing is a normal tick. Don't
+   retry with relaxed criteria.
 
 ## Why the dispatcher claims
 

@@ -160,6 +160,12 @@ SETUP
 VERIFY
 ```
 
+If `SETUP` fails only on a write to `.git/config` or `.git/hooks`
+(`core.hooksPath`, a hooks installer), continue: the sandbox protects
+those paths, and the worktree shares them with the main repo. Put
+`SETUP writes .git/config: <command>` in your report; it is the
+project's bug, not the PR's.
+
 **It passes only when it exits 0 and**, if `project.md` names a pass
 line (for example `gate: PASS <sha>`), that line shows the SHA from
 `git rev-parse HEAD`, which is your local merge commit. Anything else is
@@ -322,8 +328,16 @@ abstractions that the plan does not specify.
 
    The view must show `APPROVED` by your login at `headRefOid` equal to
    that SHA; if the head moved (an author push after your approval),
-   back to step 4. No `--delete-branch`: it needs a current branch and
-   your HEAD is detached. A non-zero exit does not mean the merge
+   back to step 4. **The merge is one command on its own**: no `&&`, no
+   `cat` in front, no `$(…)` or variable for the SHA, no `cd` prefix
+   (run it from the worktree you are already in). A chained call only
+   matches the repo's `gh` allow rule if every part does. Even a bare
+   merge is inspected by the auto-mode classifier, which can't see the
+   approval; what clears it is the user's auto-mode trust entry
+   (`${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` § Auto mode), so a
+   denial means that entry is missing, and your report should say so. No
+   `--delete-branch`: it needs a current branch and your HEAD is
+   detached. A non-zero exit does not mean the merge
    failed: gh merges server-side first, then errors on cleanup. Check
    `gh pr view <n> --json state,mergedAt` before concluding. If the
    merge is refused as not mergeable, another PR landed → step 4.

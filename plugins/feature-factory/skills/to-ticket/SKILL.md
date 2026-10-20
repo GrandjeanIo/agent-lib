@@ -17,7 +17,8 @@ Both are decided here. An agent at 3am cannot tell that two tickets
 will both rewrite the auth middleware. You can.
 
 Read `docs/agents/project.md` (`LINEAR_MCP`, `LINEAR_TEAM` = `T`,
-`REPO_LABEL`, `SPEC_DIR`, `SHARED_GLOBS`, `PIPELINE_PATHS`) and
+`REPO_LABEL`, `SPEC_DIR`, `SHARED_GLOBS`, `PIPELINE_PATHS`,
+`SENSITIVE_PATHS`) and
 `${CLAUDE_PLUGIN_ROOT}/docs/issue-tracker.md` first.
 
 ## Process
@@ -33,7 +34,11 @@ they're skipping the design stage for a small change.
 ### 2. Verify against the codebase
 
 Confirm the plan's file list still matches the code. Respect ADRs in
-the area. Touch sets in step 4 are drawn from this pass.
+the area. Touch sets in step 4 are drawn from this pass. Check whether
+a slice will need a helper or loader under `SENSITIVE_PATHS` that the
+plan doesn't name (a shared loader the feature reads through, say); if
+so, its touch set must include that path, so the escalation is visible
+now rather than at review.
 
 ### 3. Draft vertical slices
 
@@ -76,9 +81,11 @@ declares that whole glob.
 ### 5. Review with the user
 
 Present a numbered list. Per ticket: **Title**, **Repo** (if several),
-**Blocked by**, **Touches**, **What it delivers** (the thing you'd
+**Blocked by**, **Touches**, **Sensitive** (yes when `## Touches`
+overlaps `SENSITIVE_PATHS` or `PIPELINE_PATHS`: its PR escalates to a
+person instead of merging), **What it delivers** (the thing you'd
 demo). Then one line: ticket count, widest set that can run at once,
-critical-path length. If nothing can run in parallel, say so and ask
+critical-path length, how many will escalate on review. If nothing can run in parallel, say so and ask
 whether any can be split.
 
 Ask: granularity right? Blocking edges correct? Any touch sets

@@ -38,7 +38,8 @@ an API key from that workspace avoids the browser flow:
 - **Create**: in team `T`, with a title, markdown description, and
   `REPO_LABEL` if the project defines one.
 - **Read**: by identifier (`T-<n>`), with comments and labels.
-- **List**: team `T`, filtered by state, triage label and `REPO_LABEL`.
+- **List**: team `T`, filtered by state (Todo for candidates, In
+  Progress for in-flight), triage label and `REPO_LABEL`.
 - **Comment / label**: by name (`triage-labels.md`). Create a missing
   label once in team `T`; never duplicate.
 - **Claim**: assign to yourself and move to In Progress. This is the
@@ -55,8 +56,11 @@ an API key from that workspace avoids the browser flow:
 ## The agent queue
 
 `task-implementer` and `pr-reviewer` work only issues labelled
-`ready-for-agent` (plus `REPO_LABEL` when set). Nothing else is a
-candidate or counts as in flight.
+`ready-for-agent` (plus `REPO_LABEL` when set). A **candidate** is
+such an issue in state Todo; **in flight** is one with an assignee (In
+Progress). Backlog is never a candidate, even with the label: moving a
+ticket to Todo is how a person releases it to the agents. Nothing else
+is a candidate or counts as in flight.
 
 A ticket's `Source:` footer names its `plan.md`. It is resolved through
 `SPEC_DIR`: when intents live outside the repo (a sibling repo, a
