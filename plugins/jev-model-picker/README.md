@@ -10,7 +10,7 @@ A Claude Code mod that lets JEV pick the model once per context: at session star
 - **Every other prompt:** the model is left alone.
 
 ```
-first prompt (or first after /clear) ──► JEV prompt-router (haiku | sonnet | opus) ──► /config model row
+first prompt (or first after /clear) ──► JEV prompt-router (haiku | sonnet | opus | fable) ──► /config model row
                                                                                        status line: "jev → sonnet"
 ```
 
@@ -53,7 +53,7 @@ and don't set `TYPESAFE_API_KEY`, or set `JEV_MOCK=1`. See [Data and privacy](#d
 | Option | Default | |
 | --- | --- | --- |
 | TypeSafe API key (`apiKey`) | empty | Kept in secure storage, never in settings.json. When empty, the mod reads `TYPESAFE_API_KEY` from the environment. |
-| Route down to Haiku (`allowHaiku`) | on | Turn it off and JEV picks only between Sonnet and Opus (the claude-jev approach). |
+| Route down to Haiku (`allowHaiku`) | on | Turn it off and JEV picks only among Sonnet, Opus and Fable. |
 | Haiku confidence bar (`haikuConfidence`) | 0.9 | How sure JEV must be before downgrading to Haiku. |
 
 Change the API key later in `/plugin` → jev-model-picker → configure. The other two options are rows in `/config`.
@@ -86,7 +86,7 @@ after `/clear`, to the TypeSafe JEV API at `https://api.typesafe.ai/v1/systemone
 
 - the prompt text, verbatim,
 - fixed instructions: a sentence saying the prompt came from Claude Code, and the model-tier question
-  (haiku, sonnet or opus, with a criterion for each),
+  (haiku, sonnet, opus or fable, with a criterion for each),
 - the model name, `jev-latest`.
 
 Not sent: the working directory, file contents, transcript or session history, and any prompt after
