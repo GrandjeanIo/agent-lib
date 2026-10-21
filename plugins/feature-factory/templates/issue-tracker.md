@@ -18,12 +18,14 @@ Work is tracked in Linear, through the Linear MCP server. Team and labels come f
 
 ## Ticket states
 
-| State | Meaning |
-| --- | --- |
-| Todo | Published by `to-tickets`, not started. |
-| In Progress | An implementer has it. |
-| In Review | On the intent's PR, which is commented on the ticket. |
-| Done | The PR is merged. Its `Closes` lines do this. |
+When a skill names a role, use the Linear state mapped to it here.
+
+| Role | Linear state | Meaning |
+| --- | --- | --- |
+| Todo | Todo | Published by `to-tickets`, not started. |
+| In Progress | In Progress | An implementer has it. |
+| In Review | In Review | On the intent's PR, which is commented on the ticket. |
+| Done | Done | The PR is merged. Its `Closes` lines do this through Linear's GitHub integration. |
 
 ## When a skill says "publish to the issue tracker"
 
