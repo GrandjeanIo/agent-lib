@@ -6,17 +6,19 @@ disable-model-invocation: true
 
 # Setup
 
-Write `docs/agents/project.md` and `docs/agents/issue-tracker.md` from this plugin's `templates/`,
-after checking that Linear and the local environment can carry an unattended `build`.
+Check that Linear and the local environment can carry an unattended `build`, then write
+`docs/agents/project.md` and `docs/agents/issue-tracker.md` from this plugin's `templates/`.
 
-Explore first, then take the sections below one at a time: present what you found, lead with the
-recommended answer so the user can accept it in a word, and skip a section the exploration already
-settled. Change nothing in Linear, settings, git or `docs/agents/` without a yes, and never work
-around a problem on your own (for example by adding a project rule): propose the fix instead. If a
-file in `docs/agents/` exists, update it in place and keep the user's edits.
+Explore first, then work through the sections below in order. For each one, show what you found
+and lead with your recommended answer so the user can accept it in a word. Skip a section the
+exploration already settled.
 
-Setup is done when every check passes. A problem found is something to fix now, not a note for the
-report: the report's open list holds only what the user declined or must do outside the agent.
+Ask before changing anything in Linear, settings, git or `docs/agents/`. When something is
+broken, propose the fix and wait; don't work around it yourself, for example by adding a project
+rule. If a file in `docs/agents/` already exists, update it in place and keep the user's edits.
+
+Setup is done when every check passes. Fix problems as you find them. The report's open list is
+only for what the user declined or has to do outside the agent.
 
 ## 1. Explore
 
@@ -29,15 +31,16 @@ report: the report's open list holds only what the user declined or must do outs
 
 ## 2. Linear team
 
-List the teams and propose the one matching this repo. Confirm it: every ticket, label and project
-lands there. The skills create one Linear project per intent later, so there is no project to pick
-now. Ask whether intents live in this repo (`INTENT_HOME`) or in another one.
+List the teams, propose the one that matches this repo, and get the user to confirm it, since
+every ticket, label and project lands there. The skills create one Linear project per intent
+later, so there is no project to pick now. Ask whether intents live in this repo (`INTENT_HOME`)
+or in another one.
 
 ## 3. Labels
 
-The factory needs `ready-for-agent` and the repo label, proposed as `repo:<repo-name>` even for a
-single repo, because `to-tickets` and `build` filter by it. List the ones the team lacks and ask
-whether to create them.
+The factory needs `ready-for-agent` and a repo label, because `to-tickets` and `build` filter by
+both. Propose `repo:<repo-name>` for the repo label, even in a single-repo setup. List the labels
+the team lacks and ask whether to create them.
 
 ## 4. States
 
@@ -50,42 +53,43 @@ The skills move tickets through four roles. Map each to a state in the team's wo
 | In Review | started |
 | Done | completed |
 
-Match by name first, then by type. Show the mapping. When a role has no state, two roles share one,
-or a state has the wrong type, say which and ask how to correct it: map it to another existing
-state, or have the user add the state in Linear's team settings and re-check. Record the final
-mapping in `issue-tracker.md`.
+Match by name first, then by type, and show the mapping. If a role has no state, two roles share
+one, or a state has the wrong type, say which and ask how to correct it: map the role to another
+existing state, or have the user add the state in Linear's team settings and re-check. Record the
+final mapping in `issue-tracker.md`.
 
-Then get a yes or no on Linear's GitHub integration for this repo; don't leave it unasked.
-Without it, a merged PR's `Closes` lines don't move tickets to Done, and blocked tickets never
-reach the frontier. On a no, the user turns it on in Linear's settings and you re-check, or it
-goes on the open list.
+Then ask whether Linear's GitHub integration is on for this repo, and get an answer. Without it, a
+merged PR's `Closes` lines don't move tickets to Done, so blocked tickets never reach the
+frontier. If it's off, the user turns it on in Linear's settings and you re-check, or it goes on
+the open list.
 
 ## 5. Sandbox and worktrees
 
-Prove the agent can do what `build` and the implementers do, using the proposed `SETUP` and
-`VERIFY` commands, without bypassing the sandbox. Say up front that the check pushes a throwaway
-branch and deletes it again.
+Prove, with the proposed `SETUP` and `VERIFY` commands and without bypassing the sandbox, that the
+agent can do what `build` and the implementers do. Tell the user up front that the check pushes a
+throwaway branch and then deletes it.
 
 1. Implementers run in `.claude/worktrees/` (`isolation: "worktree"`), so check there:
    `git worktree add -b ff-setup-check --no-track .claude/worktrees/ff-setup-check HEAD`.
    Confirm `.claude/worktrees/` is gitignored.
-2. In it, run `SETUP`, then `VERIFY`. Confirm `VERIFY` exits 0 on this clean checkout; a gate that
-   already fails blocks every PR.
+2. In that worktree, run `SETUP`, then `VERIFY`. `VERIFY` must exit 0 on this clean checkout,
+   because a gate that already fails blocks every PR.
 3. Confirm `SETUP` didn't write `.git/config` or `.git/hooks`. If it did, propose a variant that
-   doesn't (for example, skipping a `prepare` hook installer).
-4. Remove that worktree. `build` itself works under `$TMPDIR`, so add
-   `git worktree add "$TMPDIR/ff-setup-check" ff-setup-check` and, in it, run the commands `build`
-   runs against the remote, exactly as it writes them: `git fetch origin`,
-   `git push origin HEAD`, `gh pr list --limit 1`, then `git push origin --delete ff-setup-check`.
+   doesn't, for example one that skips a `prepare` hook installer.
+4. Remove that worktree. `build` itself works under `$TMPDIR`, so run
+   `git worktree add "$TMPDIR/ff-setup-check" ff-setup-check` and, in it, run the remote commands
+   exactly as `build` writes them: `git fetch origin`, `git push origin HEAD`,
+   `gh pr list --limit 1`, then `git push origin --delete ff-setup-check`.
 5. Remove the worktree and delete the local `ff-setup-check` branch.
 
-Read what `VERIFY` skips: skipped tests, jobs CI runs that `VERIFY` leaves out. For each, ask
-whether `VERIFY` should reach it. A test skipped for want of a service or a secret usually can
-be reached: a local service, an env var in the settings `env`, or the untracked file in
-`.worktreeinclude`. Fix what the user wants covered and re-run. What stays out goes into
+Look at what `VERIFY` skips: skipped tests, and CI jobs that `VERIFY` leaves out. For each, ask
+whether `VERIFY` should cover it. A test skipped for lack of a service or a secret can usually be
+reached with a local service, an env var in the settings `env`, or the untracked file listed in
+`.worktreeinclude`. Fix what the user wants covered and re-run. Whatever stays out goes into
 `UNTESTED`.
 
-When a step fails, find out why and report it as one of:
+When a step fails, find the cause and report it as one of these:
+
 - a sandbox block (a network domain, or a write outside the repo such as `$TMPDIR` or a package
   cache): propose the sandbox setting that allows it;
 - a missing permission prompt: propose the `permissions.allow` entry;
@@ -95,18 +99,18 @@ When a step fails, find out why and report it as one of:
 
 Re-run the check after each fix the user accepts.
 
-Then list the entries unattended runs need that `.claude/settings.json` doesn't allow yet:
+Next, list the entries unattended runs need that `.claude/settings.json` doesn't allow yet:
 `Bash(git *)`, `Bash(gh *)`, the Linear MCP tools, and the `SETUP` and `VERIFY` commands. Write
 settings only when the user says so.
 
-Last, list the worktrees and `ff-*`, `intent/*` and ticket branches left over from earlier runs
+Finally, list worktrees and `ff-*`, `intent/*` and ticket branches left over from earlier runs
 (`git worktree list`, `git worktree prune --dry-run`). Offer to remove the ones with no
-uncommitted changes and no commits missing from `origin`. Name any you'd keep and why.
+uncommitted changes and no commits missing from `origin`, and name any you'd keep and why.
 
 ## 6. Write
 
-Show both files with every key filled and its source. `UNTESTED` lists what `VERIFY` doesn't
-reach after §5, or `—`. Let the user edit, then write:
+Show both files with every key filled in and where each value came from. `UNTESTED` lists what
+`VERIFY` still doesn't reach after §5, or `—`. Let the user edit, then write:
 
 - `docs/agents/project.md` from `templates/project.md`;
 - `docs/agents/issue-tracker.md` from `templates/issue-tracker.md`, with the team and the state
@@ -124,5 +128,5 @@ Three short lists, one line per item, `—` when empty:
 - **Needs you:** only what the user declined or must do outside the agent, each with the one
   action that closes it.
 
-`UNTESTED` is already in `project.md`, so don't repeat it. End with: `/feature-factory:to-intent`
-is next.
+Don't repeat `UNTESTED`; it's already in `project.md`. End by saying that
+`/feature-factory:to-intent` is next.
