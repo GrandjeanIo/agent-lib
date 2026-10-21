@@ -15,6 +15,7 @@ const MODEL_IDS: Record<string, string> = {
   haiku: 'claude-haiku-5-5',
   sonnet: 'claude-sonnet-5-5',
   opus: 'claude-opus-5-5',
+  fable: 'claude-fable-5-1',
 }
 const KNOWN_IDS = new Set(Object.values(MODEL_IDS))
 

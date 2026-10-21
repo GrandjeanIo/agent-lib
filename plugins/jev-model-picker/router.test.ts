@@ -66,7 +66,7 @@ test('mid-session prompt: no Jev call, model left alone', async ($, on) => {
 
 test('Jev unsure: falls back to opus and says why', async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
-  jev(on, { haiku: 0.3, sonnet: 0.4, opus: 0.3 })
+  jev(on, { haiku: 0.3, sonnet: 0.325, opus: 0.2, fable: 0.175 })
   const { set, lines } = session(on, 0)
 
   await $.prompt.submit(submit('make it better'))
@@ -137,8 +137,8 @@ test('already on the right model: still says so', async ($, on) => {
 
 test('haiku under its higher bar: steps up to sonnet, not all the way to opus', async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
-  // conf (0.88 - 1/3) / (2/3) = 0.82: above the 0.75 act band, under the 0.9 haiku bar.
-  jev(on, { haiku: 0.88, sonnet: 0.08, opus: 0.04 })
+  // conf (0.865 - 1/4) / (3/4) = 0.82: above the 0.75 act band, under the 0.9 haiku bar.
+  jev(on, { haiku: 0.865, sonnet: 0.07, opus: 0.045, fable: 0.02 })
   const { set, lines } = session(on, 0)
 
   await $.prompt.submit(submit('rename foo to bar'))
@@ -157,14 +157,14 @@ test('the haiku bar is an option', { options: { haikuConfidence: 0.8 } }, async 
   expect(set).toEqual(['haiku'])
 })
 
-test('haiku off: jev is only asked about sonnet and opus', { options: { allowHaiku: false } }, async ($, on) => {
+test('haiku off: jev is only asked about sonnet, opus and fable', { options: { allowHaiku: false } }, async ($, on) => {
   mock.env(on, { TYPESAFE_API_KEY: 'k' })
   const sent = jev(on, { sonnet: 0.95, opus: 0.05 })
   const { set } = session(on, 0)
 
   await $.prompt.submit(submit('rename foo to bar'))
 
-  expect(Object.keys((sent[0]!.questions.model as { criteria: object }).criteria)).toEqual(['sonnet', 'opus'])
+  expect(Object.keys((sent[0]!.questions.model as { criteria: object }).criteria)).toEqual(['sonnet', 'opus', 'fable'])
   expect(set).toEqual(['sonnet'])
 })
 

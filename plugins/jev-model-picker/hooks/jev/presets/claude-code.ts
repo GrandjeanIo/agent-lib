@@ -12,9 +12,10 @@ export const promptRouter = defineSpec({
       type: 'choice',
       instructions: 'Which model tier is the cheapest one that will handle this prompt well?',
       criteria: {
-        haiku: 'Trivial or mechanical: a lookup, a rename, a one-line fix, formatting, a quick question about the code.',
-        sonnet: 'Ordinary engineering work: implement or fix a well-scoped feature, write tests, explain a module.',
-        opus: 'Hard or open-ended: architecture, subtle debugging across many files, security, ambiguous requirements.',
+        haiku: 'Trivial lookups: a quick question about the code, finding where something is defined.',
+        sonnet: 'Mechanical: a rename, a one-line fix, formatting, a small well-defined edit.',
+        opus: 'Ordinary engineering work: implement or fix a well-scoped feature, write tests, explain a module.',
+        fable: 'Hard or open-ended: architecture, subtle debugging across many files, security, ambiguous requirements.',
       },
       // Escalating means "unsure" — then spend more, not less.
       fallback: 'opus',
