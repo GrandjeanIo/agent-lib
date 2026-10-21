@@ -4,6 +4,8 @@ description: Break docs/intent/<slug>/plan.md into tracer-bullet Linear issues i
 disable-model-invocation: true
 ---
 
+<!-- Adapted from Matt Pocock's [`to-tickets`](https://github.com/mattpocock/skills) (MIT): tracer-bullet slices and the expand–contract handling of wide refactors. -->
+
 # To Tickets
 
 Turns a plan into Linear issues that `/feature-factory:build` can work

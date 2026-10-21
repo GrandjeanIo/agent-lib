@@ -87,6 +87,13 @@ The plugin ships no hooks or scripts. The real risk is the one in
 
 ## Credits
 
-`mattpocock-skills` by [Matt Pocock](https://github.com/mattpocock/skills) (MIT) supplies `tdd` and
-`code-review`. The shape of `templates/issue-tracker.md` and the `setup` skill's explore, confirm,
-write flow are adapted from his `setup-matt-pocock-skills`.
+Several skills build on [Matt Pocock's skills](https://github.com/mattpocock/skills) (MIT, see [LICENSE](../../LICENSE)). Thank you, Matt.
+
+| feature-factory | Adapted from |
+|---|---|
+| `to-intent`, `to-plan` | `to-spec`: testing seams, plan structure |
+| `to-tickets` | `to-tickets`: tracer-bullet slices, expand–contract for wide refactors |
+| `setup`, `templates/issue-tracker.md` | `setup-matt-pocock-skills`: explore, confirm, write flow and template shape |
+| `build`, `implementer` | Call `mattpocock-skills:tdd` and `mattpocock-skills:code-review` at runtime |
+
+The adaptations are mine, and any mistakes in them are too. Matt isn't affiliated with this plugin.

@@ -26,3 +26,11 @@ Add this repo as a marketplace once, then install what you need:
 /plugin install jev-model-picker@agent-lib
 /plugin install feature-factory@agent-lib
 ```
+
+## Credits
+
+`feature-factory` builds on [Matt Pocock's skills](https://github.com/mattpocock/skills) (MIT). See [its credits](plugins/feature-factory/README.md#credits).
+
+## License
+
+[MIT](LICENSE)
