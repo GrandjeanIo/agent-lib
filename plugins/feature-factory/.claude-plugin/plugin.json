@@ -1,9 +1,9 @@
 {
   "name": "feature-factory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "Anders Grandjean-Thomsen" },
-  "description": "Intent-to-merge agent pipeline: scope work into Linear tickets with humans, then let two /loop dispatchers build each ticket test-first and review it on a second GitHub account.",
+  "description": "Intent-to-PR pipeline: scope work into Linear tickets with a person, then build an intent test-first with parallel subagents, review and fix it, and open one PR per repo with a short review list. Requires mattpocock-skills.",
   "homepage": "https://github.com/GrandjeanIo/agent-lib",
   "repository": "https://github.com/GrandjeanIo/agent-lib",
-  "keywords": ["linear", "github", "pipeline", "tdd", "code-review", "agents"]
+  "keywords": ["linear", "github", "pipeline", "tdd", "code-review", "agents", "cross-repo"]
 }
