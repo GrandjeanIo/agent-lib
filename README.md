@@ -11,6 +11,7 @@ PRs are welcome. Every PR must include a security scan result from [NVIDIA Skill
 | Plugin | Description | Status
 |---|---|---|
 | [jev-model-picker](plugins/jev-model-picker/) | My name is Jev. I pick your model once, at session start and after /clear. No prompts, no mid-session switches, cache stays warm. | POC
+| [feature-factory](plugins/feature-factory/) | Intent-to-PR agent pipeline: scope work into Linear tickets with a person, then build each intent test-first with parallel subagents, review and fix it, and open one PR per repo with a short review list. Requires mattpocock-skills. | POC
 
 **Privacy:** `jev-model-picker` sends the first prompt of each new session to a third-party API (TypeSafe) by default when a TypeSafe key is configured. See [Data and privacy](plugins/jev-model-picker/README.md#data-and-privacy).
 
@@ -23,4 +24,13 @@ Add this repo as a marketplace once, then install what you need:
 ```
 /plugin marketplace add GrandjeanIo/agent-lib
 /plugin install jev-model-picker@agent-lib
+/plugin install feature-factory@agent-lib
 ```
+
+## Credits
+
+`feature-factory` builds on [Matt Pocock's skills](https://github.com/mattpocock/skills) (MIT). See [its credits](plugins/feature-factory/README.md#credits).
+
+## License
+
+[MIT](LICENSE)

@@ -7,9 +7,13 @@
     {
       "name": "jev-model-picker",
       "source": "./plugins/jev-model-picker"
+    },
+    {
+      "name": "feature-factory",
+      "source": "./plugins/feature-factory"
     }
   ],
   "metadata": {
-    "description": "Agent tools and Claude Code plugins: the jev-model-picker plugin"
+    "description": "Agent tools and Claude Code plugins: jev-model-picker and feature-factory"
   }
 }
