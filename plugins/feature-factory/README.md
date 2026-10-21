@@ -47,12 +47,13 @@ Tested with mattpocock-skills 1.3.1. Install both at project scope in each repo.
 
 ## Set up a repo
 
-1. Run `/setup-matt-pocock-skills` and pick **Other** for the issue tracker: Linear, through
-   the Linear MCP server. It writes `docs/agents/issue-tracker.md`. Keep the default triage
-   labels. Matt's skills read the glossary from `GLOSSARY.md` and decisions from `docs/adr/`.
-2. Copy [`templates/project.md`](templates/project.md) to `docs/agents/project.md` and fill it.
-3. For unattended `build` runs, allow `Bash(git *)`, `Bash(gh *)`, the Linear MCP tools, and
-   your `SETUP` and `VERIFY` commands in `.claude/settings.json`.
+Run `/feature-factory:setup`. It reads the repo, checks the Linear team, states and labels, and
+writes `docs/agents/project.md` and `docs/agents/issue-tracker.md` from [`templates/`](templates/).
+`SETUP` and `VERIFY` are inferred from the repo, and `VERIFY` is run once before it's written.
+It also lists the permissions unattended `build` runs need (`Bash(git *)`, `Bash(gh *)`, the Linear
+MCP tools, your `SETUP` and `VERIFY` commands) and adds them to `.claude/settings.json` if you say so.
+
+You don't need `/setup-matt-pocock-skills`: feature-factory reads only the two files above.
 
 ## What it does to your repo, GitHub and Linear
 
@@ -83,3 +84,9 @@ on generic phrases like "implement the plan"; it now triggers only on building a
 The plugin ships no hooks or scripts. The real risk is the one in
 [What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear):
 `build` pushes branches, opens PRs and moves Linear tickets without a person present.
+
+## Credits
+
+`mattpocock-skills` by [Matt Pocock](https://github.com/mattpocock/skills) (MIT) supplies `tdd` and
+`code-review`. The shape of `templates/issue-tracker.md` and the `setup` skill's explore, confirm,
+write flow are adapted from his `setup-matt-pocock-skills`.
