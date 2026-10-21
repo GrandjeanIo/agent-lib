@@ -1,6 +1,6 @@
 {
   "name": "jev-model-picker",
-  "version": "0.3.0",
+  "version": "0.3.0-alpha.1",
   "author": { "name": "Anders Grandjean-Thomsen" },
   "description": "My name is Jev. I pick your model once, at session start and after /clear. No prompts, no mid-session switches, cache stays warm.",
   "userConfig": {
