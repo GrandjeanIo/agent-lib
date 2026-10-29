@@ -4,7 +4,7 @@ description: Set up this repo for the feature factory. Checks the Linear team, l
 disable-model-invocation: true
 ---
 
-<!-- Adapted from Matt Pocock's [`setup-matt-pocock-skills`](https://github.com/mattpocock/skills) (MIT): the explore, confirm, write flow. -->
+Adapted from Matt Pocock's [`setup-matt-pocock-skills`](https://github.com/mattpocock/skills) (MIT): the explore, confirm, write flow.
 
 # Setup
 

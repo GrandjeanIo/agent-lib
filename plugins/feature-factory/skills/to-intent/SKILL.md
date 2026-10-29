@@ -3,7 +3,7 @@ name: to-intent
 description: Capture a new situation or goal as a durable docs/intent/<NNN-slug>/intent.md — stage 1 of the intent → plan → tickets → build flow. Use when starting new work that doesn't have an intent.md yet.
 ---
 
-<!-- Adapted in part from Matt Pocock's [`to-spec`](https://github.com/mattpocock/skills) (MIT). -->
+Adapted in part from Matt Pocock's [`to-spec`](https://github.com/mattpocock/skills) (MIT).
 
 # Intent
 
