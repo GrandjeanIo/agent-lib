@@ -90,8 +90,9 @@ Tested with mattpocock-skills 1.3.1. Install both at project scope in each repo.
 
 ## Set up a repo
 
-Run `/feature-factory:setup`. It reads the repo, checks the Linear team, states and labels, and
-writes `docs/agents/project.md` and `docs/agents/issue-tracker.md` from [`templates/`](templates/).
+Run `/feature-factory:setup`. It reads the repo, checks the Linear team, states and labels,
+checks the repo has the GitHub labels `needs-review` and `agent-reviewed` (and asks before
+creating them), and writes `docs/agents/project.md` and `docs/agents/issue-tracker.md` from [`templates/`](templates/).
 `SETUP` and `VERIFY` are inferred from the repo, and `VERIFY` is run once before it's written.
 It also lists the permissions unattended `build` runs need (`Bash(git *)`, `Bash(gh *)`, the Linear
 MCP tools, your `SETUP` and `VERIFY` commands) and adds them to `.claude/settings.json` if you say so.
