@@ -46,9 +46,8 @@ the team lacks and ask whether to create them.
 
 On GitHub, the review flow needs two labels: `build` opens every PR with `needs-review`, and
 `review` moves a reviewed PR to `agent-reviewed`. Both are defined in
-[`labels.md`](../../labels.md). Check which the repo lacks with
-`gh label list --search <name> --json name`, and ask whether to create them with the command
-there.
+[`labels.md`](../../labels.md). Check which the repo lacks with the exact-match check there,
+and ask before creating them with its command.
 
 A label the user declines goes on the open list: `build` and `review` will create it themselves
 on their first run.

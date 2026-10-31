@@ -111,9 +111,8 @@ person merges each PR, and its `Closes` lines move the tickets to Done. It talks
 
 `review` reads PRs, their checks, linked issues and Linear tickets, and files on the base branch.
 It writes one review per PR (always `COMMENT`), creates the `agent-reviewed` label if missing, and
-swaps the labels. It never approves, requests changes, merges, pushes, edits or runs a PR's code;
-the rules for untrusted PR content are in [`skills/review/SKILL.md`](skills/review/SKILL.md)
-step 2. Its reviewer subagents have no shell at all: Read, Grep and Glob only.
+swaps the labels. What it never does, and the rules for untrusted PR content, are in
+[`skills/review/SKILL.md`](skills/review/SKILL.md) (the intro and step 2). Its reviewer subagents have no shell at all: Read, Grep and Glob only.
 
 ## Security scan
 
