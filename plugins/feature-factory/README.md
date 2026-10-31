@@ -117,29 +117,30 @@ swaps the labels. What it never does, and the rules for untrusted PR content, ar
 ## Security scan
 
 [NVIDIA Skillspector](https://github.com/nvidia/skillspector) v2.12.0 with the `claude_cli` LLM
-provider (4 of 4 LLM calls succeeded), run on commit `74735e1`. The scan covered the shipped files
+provider (4 of 4 LLM calls succeeded), run on commit `20a5818`. The scan covered the shipped files
 only: the 17 tracked files under `plugins/feature-factory/`, exported to a clean folder. Only this
 section of the README changed after it.
 
 | Result | Value |
 |---|---|
-| Risk score | 12/100 |
+| Risk score | 14/100 |
 | Severity | LOW |
 | Recommendation | CAUTION |
-| Issues | 2, both `AS3` (MEDIUM, LLM review disagreed at 0.95 confidence) |
-| Coverage | 88.2%: 15 of 17 files fully inspected, 2 partially |
-| Degraded analyzers | `bundled_execution_surface` (can't read the `modules` form of `hooks/hooks.json`), `static_patterns_tool_misuse` (an expression in `hooks/register.ts` exceeded its parser's span limit) |
+| Issues | 3, all `AS3` (MEDIUM, LLM review disagreed at 0.93–0.95 confidence) |
+| Coverage | 82.4%: 14 of 17 files fully inspected, 3 partially |
+| Degraded analyzers | `bundled_execution_surface` (can't read the `modules` form of `hooks/hooks.json`), `static_patterns_tool_misuse` (an expression in `hooks/register.ts` and one in `label.test.ts` exceeded its parser's span limit) |
 
-Both `AS3` ("skill enumeration") findings point at the link to `skills/review/SKILL.md` in
-[What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear): a
-README link to the plugin's own skill, not a skill reading other skills. The `TM1` finding of the
-previous scan (`git push origin HEAD` in `build`, by design) is no longer reported.
+All three `AS3` ("skill enumeration") findings point at mentions of the plugin's own review skill
+in this README: two at the link in
+[What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear), and
+one at the previous version of this paragraph, which named that link's path. None is a skill
+reading other skills.
 
 The plugin ships one hook, the label guard (`hooks/register.ts`): it reads each Bash command
 and refuses a `gh pr create` without `needs-review`, in factory repos. It makes no network calls
 and runs nothing; it checks whether `docs/agents/project.md` exists in the session's folder, the
 folders a command `cd`s into, and their parents. The static tool-misuse analyzer still inspects
-it only partly, so read it yourself: it is about 100 lines.
+it only partly, so read it yourself: it is about 120 lines.
 
 The real risk is the one in
 [What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear):
