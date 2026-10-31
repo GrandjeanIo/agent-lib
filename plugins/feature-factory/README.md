@@ -117,36 +117,31 @@ swaps the labels. What it never does, and the rules for untrusted PR content, ar
 ## Security scan
 
 [NVIDIA Skillspector](https://github.com/nvidia/skillspector) v2.12.0 with the `claude_cli` LLM
-provider (4 of 4 LLM calls succeeded). The scan covered the shipped files only: the 16 tracked
-files under `plugins/feature-factory/`, exported to a clean folder.
+provider (4 of 4 LLM calls succeeded), run on commit `74735e1`. The scan covered the shipped files
+only: the 17 tracked files under `plugins/feature-factory/`, exported to a clean folder. Only this
+section of the README changed after it.
 
 | Result | Value |
 |---|---|
-| Risk score | 17/100 |
+| Risk score | 12/100 |
 | Severity | LOW |
 | Recommendation | CAUTION |
-| Issues | 1: `TM1` (HIGH, LLM review disagreed at 0.9 confidence) |
-| Coverage | 87.5%: 14 of 16 files fully inspected, 2 partially |
+| Issues | 2, both `AS3` (MEDIUM, LLM review disagreed at 0.95 confidence) |
+| Coverage | 88.2%: 15 of 17 files fully inspected, 2 partially |
 | Degraded analyzers | `bundled_execution_surface` (can't read the `modules` form of `hooks/hooks.json`), `static_patterns_tool_misuse` (an expression in `hooks/register.ts` exceeded its parser's span limit) |
 
-`TM1` flags `git push origin HEAD` in `build` step 2. That push is by design and unchanged from
-the version scanned clean before: it publishes the `intent/<NNN-slug>` integration branch, never
-main. The implementer still never pushes. The two partially inspected files are the label guard,
-below.
-
-Earlier scans of this version flagged three more issues, all fixed before this run: two `P2`
-hidden-instruction findings (credit lines in skills were HTML comments, and posted reviews were
-marked with one; both are visible text now) and `SDI-4` (this README still said the plugin ships
-no hooks).
+Both `AS3` ("skill enumeration") findings point at the link to `skills/review/SKILL.md` in
+[What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear): a
+README link to the plugin's own skill, not a skill reading other skills. The `TM1` finding of the
+previous scan (`git push origin HEAD` in `build`, by design) is no longer reported.
 
 The plugin ships one hook, the label guard (`hooks/register.ts`): it reads each Bash command
 and refuses a `gh pr create` without `needs-review`, in factory repos. It makes no network calls
-and reads one file's existence (`docs/agents/project.md`).
+and runs nothing; it checks whether `docs/agents/project.md` exists in the session's folder, the
+folders a command `cd`s into, and their parents. The static tool-misuse analyzer still inspects
+it only partly, so read it yourself: it is about 100 lines.
 
-**Not yet rescanned.** The scan above ran before the review fixes (`labels.md`, the guard's flag
-parsing and factory-repo check, the reviewer losing Bash). Its coverage of the guard was partial,
-too: `hooks/register.ts` was only partly inspected. Rescan with Skillspector, ideally with an
-analyzer that parses the hook, before merging. The real risk is the one in
+The real risk is the one in
 [What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear):
 `build` pushes branches, opens PRs and moves Linear tickets, and `review` posts reviews and swaps
 labels, without a person present.
