@@ -17,8 +17,8 @@ export const DENY =
 
 // Splits a shell command into simple commands, each a list of words with the quotes removed.
 // Separators (`;`, `&`, `|`, `(`, `)`, newline) count only outside quotes; a backslash-newline
-// continues the line.
-export const simpleCommands = (command: string): string[][] => {
+// continues the line; a `#` that starts a word comments out the rest of the line.
+const simpleCommands = (command: string): string[][] => {
   const commands: string[][] = []
   let words: string[] = []
   let word: string | undefined
@@ -47,6 +47,8 @@ export const simpleCommands = (command: string): string[][] => {
         if (command[i] === '\\' && /["\\$`\n]/.test(command[i + 1] ?? '')) i++
         word += command[i]
       }
+    } else if (c === '#' && word === undefined) {
+      while (i + 1 < command.length && command[i + 1] !== '\n') i++
     } else if (/[;&|()\n]/.test(c)) endCommand()
     else if (/\s/.test(c)) endWord()
     else word = (word ?? '') + c
@@ -56,13 +58,26 @@ export const simpleCommands = (command: string): string[][] => {
 }
 
 // The words after any `VAR=value` assignments and `command`/`env`/`exec` prefixes.
-const program = (words: string[]) => {
+const withoutPrefixes = (words: string[]) => {
   let i = 0
   while (i < words.length && (/^[A-Za-z_]\w*=/.test(words[i]) || /^(command|env|exec)$/.test(words[i]))) i++
   return words.slice(i)
 }
 
-const isPrCreate = (w: string[]) => w[0] === 'gh' && w[1] === 'pr' && (w[2] === 'create' || w[2] === 'new')
+// Each simple command in `command`, as the words of the program it runs.
+export const parse = (command: string) => simpleCommands(command).map(withoutPrefixes)
+
+// The arguments of a `gh pr create`/`gh pr new`, past any `-R`/`--repo` before `pr`; else undefined.
+const prCreateArgs = (w: string[]) => {
+  if (w[0] !== 'gh') return undefined
+  let i = 1
+  for (;;) {
+    if (w[i] === '-R' || w[i] === '--repo') i += 2
+    else if (/^(-R.|--repo=)/.test(w[i] ?? '')) i++
+    else break
+  }
+  return w[i] === 'pr' && (w[i + 1] === 'create' || w[i + 1] === 'new') ? w.slice(i + 2) : undefined
+}
 
 // The values given to `--label`/`-l`: `-l x`, `-lx`, `--label x`, `--label=x`, each a comma list.
 const labels = (args: string[]) =>
@@ -71,29 +86,27 @@ const labels = (args: string[]) =>
     return value === undefined ? [] : value.split(',').map(l => l.trim())
   })
 
-// True when `command` opens a PR and no `--label`/`-l` value names the label.
-export const missingLabel = (command: string) =>
-  simpleCommands(command)
-    .map(program)
-    .some(w => isPrCreate(w) && !labels(w.slice(3)).includes(LABEL))
+// True when one of the `parse`d commands opens a PR and no `--label`/`-l` value names the label.
+export const missingLabel = (commands: string[][]) =>
+  commands.some(w => {
+    const args = prCreateArgs(w)
+    return args !== undefined && !labels(args).includes(LABEL)
+  })
 
-// The directories `command` changes into with `cd`, in order.
-const cdTargets = (command: string) =>
-  simpleCommands(command)
-    .map(program)
-    .filter(w => w[0] === 'cd' && w[1] !== undefined)
-    .map(w => w[1])
+// The directories the `parse`d commands change into with `cd`, in order.
+const cdTargets = (commands: string[][]) => commands.filter(w => w[0] === 'cd' && w[1] !== undefined).map(w => w[1])
 
 const resolve = (base: string, path: string) => (path.startsWith('/') ? path : `${base}/${path}`)
 const parent = (dir: string) => dir.replace(/\/+[^/]*\/*$/, '') || '/'
 
 export const register: Register = on => {
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    if (!missingLabel(e.command)) return next(e)
+    const commands = parse(e.command)
+    if (!missingLabel(commands)) return next(e)
     // A factory repo is any directory, or a parent of it, holding the marker: the session's
     // directory, or one the command changes into (a `cd ~/x` is not followed).
     const cwd = await $.session.cwd()
-    const starts = [cwd, ...cdTargets(e.command).filter(d => !d.startsWith('~')).map(d => resolve(cwd, d))]
+    const starts = [cwd, ...cdTargets(commands).filter(d => !d.startsWith('~')).map(d => resolve(cwd, d))]
     for (const start of starts) {
       for (let dir = start; ; dir = parent(dir)) {
         if (await $.fs.exists(`${dir === '/' ? '' : dir}/${FACTORY_MARKER}`)) return { deny: DENY }

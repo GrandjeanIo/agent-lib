@@ -1,13 +1,17 @@
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
-import { DENY, FACTORY_MARKER, missingLabel } from './hooks/register.ts'
+import { DENY, FACTORY_MARKER, missingLabel, parse } from './hooks/register.ts'
 
 // Stands in for the engine beneath the plugin: the session runs in `cwd`, the factory repos are
 // `factoryRoots`, and each Bash command that gets past the plugin is recorded and returned.
-function fakeEngine(on: On, { cwd = '/repo', factoryRoots = ['/repo'], fail = false } = {}) {
+// `fail` makes the Bash call throw; `fsFails` makes the factory-repo check throw.
+function fakeEngine(on: On, { cwd = '/repo', factoryRoots = ['/repo'], fail = false, fsFails = false } = {}) {
   const ran: string[] = []
   on('session.cwd', async () => ({ value: cwd }))
-  on('fs.exists', async (_$, e) => ({ value: factoryRoots.some(r => e.path === `${r}/${FACTORY_MARKER}`) }))
+  on('fs.exists', async (_$, e) => {
+    if (fsFails) throw new Error('fs failed')
+    return { value: factoryRoots.some(r => e.path === `${r}/${FACTORY_MARKER}`) }
+  })
   on('tool.call', async (_$, e) => {
     if (e.tool === 'Bash') ran.push(e.command)
     if (fail) throw new Error('Bash failed')
@@ -95,16 +99,34 @@ test('a failure beneath the guard is passed on, and the command runs once', asyn
   expect(ran).toEqual([command])
 })
 
+test('if the guard itself fails, an unlabelled PR is refused, not run', async ($, on) => {
+  const ran = fakeEngine(on, { fsFails: true })
+
+  const res = await $.tool.call({ tool: 'Bash', command: 'gh pr create --fill' })
+
+  expect(ran).toEqual([])
+  expect(res.deny).toContain('guard failed')
+})
+
 test('the label only counts as the value of --label or -l', () => {
-  expect(missingLabel('gh pr create --title "fix needs-review guard" --fill')).toBe(true)
-  expect(missingLabel('gh pr create --head needs-review --fill')).toBe(true)
-  expect(missingLabel('gh pr create --label bug --fill && echo needs-review')).toBe(true)
-  expect(missingLabel('gh pr new --fill')).toBe(true)
-  expect(missingLabel('git status; gh pr create --fill')).toBe(true)
-  expect(missingLabel('gh pr create --label needs-reviewed --fill')).toBe(true)
-  expect(missingLabel('GH_REPO=o/r gh pr create --fill')).toBe(true)
-  expect(missingLabel('command gh pr create --fill')).toBe(true)
-  expect(missingLabel('(cd wt && gh pr create --fill)')).toBe(true)
-  expect(missingLabel('gh pr create --label needs-review --fill')).toBe(false)
-  expect(missingLabel('gh pr create -lneeds-review --fill')).toBe(false)
+  const missing = (command: string) => missingLabel(parse(command))
+  expect(missing('gh pr create --title "fix needs-review guard" --fill')).toBe(true)
+  expect(missing('gh pr create --head needs-review --fill')).toBe(true)
+  expect(missing('gh pr create --label bug --fill && echo needs-review')).toBe(true)
+  expect(missing('gh pr new --fill')).toBe(true)
+  expect(missing('git status; gh pr create --fill')).toBe(true)
+  expect(missing('gh pr create --label needs-reviewed --fill')).toBe(true)
+  expect(missing('GH_REPO=o/r gh pr create --fill')).toBe(true)
+  expect(missing('command gh pr create --fill')).toBe(true)
+  expect(missing('(cd wt && gh pr create --fill)')).toBe(true)
+  expect(missing('gh -R o/r pr create --fill')).toBe(true)
+  expect(missing('gh --repo o/r pr create --fill')).toBe(true)
+  expect(missing('gh --repo=o/r pr new --fill')).toBe(true)
+  expect(missing('gh pr create --fill # --label needs-review')).toBe(true)
+  expect(missing('gh pr create --fill #\ngh pr create --fill --label needs-review')).toBe(true)
+  expect(missing('gh pr create --label needs-review --fill')).toBe(false)
+  expect(missing('gh pr create -lneeds-review --fill')).toBe(false)
+  expect(missing('gh -R o/r pr create --label needs-review --fill')).toBe(false)
+  expect(missing('gh pr create --label needs-review --body "#1 fix" --fill # done')).toBe(false)
+  expect(missing('git commit -m x # gh pr create --fill')).toBe(false)
 })

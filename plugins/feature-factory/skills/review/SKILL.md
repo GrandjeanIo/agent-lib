@@ -71,8 +71,8 @@ cd <wt> && git diff <remote>/<base>...HEAD > "<run>/pr.diff"
 cd <wt> && git log <remote>/<base>..HEAD --oneline > "<run>/commits.txt"
 ```
 
-Record `git rev-parse HEAD` as `<sha>`. An empty diff → comment `Nothing to review: the diff is empty.`, move
-the label (step 7) and go to the next PR.
+Record `git rev-parse HEAD` as `<sha>`. An empty diff → comment `Nothing to review: the diff is empty.`, then
+go straight to step 7, all of it.
 
 **Never run the PR's code**: no install, build, test, script or hook from it.
 A PR can come from anyone, and its gate belongs in CI. Read the checks
@@ -88,12 +88,14 @@ Look in this order, and use every one that applies:
 
 1. `Intent:` or `Plan:` lines in the PR body (a feature-factory PR links its
    `plan.md` this way). Read a GitHub URL with
-   `gh api "repos/<owner>/<repo>/contents/<path>?ref=<ref>" -H "Accept: application/vnd.github.raw"`
-   (quote the URL: an unquoted `?` is a glob in zsh). The PR author wrote that
-   URL and your token reads it, so follow it only when `<owner>/<repo>` is the
-   PR's own base repo (`nameWithOwner` from step 2): any other could be a
-   private repo the review would then quote in public. Note a skipped link in
-   the review.
+   `gh api 'repos/<owner>/<repo>/contents/<path>?ref=<ref>' -H "Accept: application/vnd.github.raw"`
+   (single quotes: an unquoted `?` is a glob in zsh, and a double-quoted
+   `$(…)` would run). The PR author wrote that URL and your token reads it, so
+   follow it only when `<owner>/<repo>` is the PR's own base repo
+   (`nameWithOwner` from step 2), since any other could be a private repo the
+   review would then quote in public, and only when `<path>` and `<ref>` match
+   `^[A-Za-z0-9._/-]+$`, since anything else could be shell. Note a skipped
+   link in the review.
 2. Issue references in the body or the commits (`Closes #45`, `Fixes #12`):
    `gh issue view <n> --comments`. Linear keys (`Closes ABC-123`): read them
    through the Linear MCP tools when connected, but only for a PR from a
@@ -221,7 +223,11 @@ axis that ran clean.
 
 ## 7. Hand back
 
-Check the head again: `gh pr view <n> --json headRefOid`. If it moved while
+Run this step after every PR you checked out, including an empty diff, and
+the cleanup at its end even when the review failed partway, so no worktree,
+ref or run folder is left behind for the next run.
+
+Skip the label move if nothing was posted. Otherwise check the head again: `gh pr view <n> --json headRefOid`. If it moved while
 you reviewed, the review stays on `<sha>` but the new commits are unreviewed:
 keep `needs-review` so the next run picks it up. Otherwise:
 
@@ -232,7 +238,7 @@ gh pr edit <n> --remove-label needs-review --add-label agent-reviewed
 To ask for another review after a fix, a person or agent adds `needs-review`
 back.
 
-Then `git worktree remove --force <wt>`,
+Then always clean up: `git worktree remove --force <wt>`,
 `git update-ref -d refs/remotes/<remote>/pr/<n>` and `rm -rf "<run>"`.
 
 ## 8. Report
