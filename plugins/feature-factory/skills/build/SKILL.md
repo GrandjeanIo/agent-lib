@@ -102,10 +102,10 @@ rounds; then run `VERIFY` once more.
 
 Write the body to a file, then open the PR with the `needs-review`
 label, so the agent reviewer (`/feature-factory:review`) picks it up.
-Never leave the label off:
+Never leave the label off. If the repo lacks `needs-review`, create it
+first as [`labels.md`](../../labels.md) shows (only when missing):
 
 ```
-gh label create needs-review --color FBCA04 --description "Waiting for the agent reviewer" --force
 gh pr create --base main --head intent/<NNN-slug> --title "<intent name>" --body-file <file> --label needs-review
 ```
 

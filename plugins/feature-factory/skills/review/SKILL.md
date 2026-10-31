@@ -3,10 +3,10 @@ name: review
 description: Review the open GitHub PRs labelled needs-review in this repo. For each one, runs three read-only reviewer subagents in parallel (standards, spec, correctness), posts one review with inline comments, and moves the label from needs-review to agent-reviewed. Use when someone asks to review the needs-review PRs, to run the PR reviewer, or passes a PR number ("/feature-factory:review", "/feature-factory:review 42"). Safe on a /loop or schedule.
 ---
 
-# Review
-
 Adapted from Matt Pocock's [`code-review`](https://github.com/mattpocock/skills/tree/main/skills/engineering/code-review)
 skill (MIT): the separate parallel axes, the spec and standards discovery, and the smell baseline.
+
+# Review
 
 Review every open PR in this repo labelled `needs-review`, post the review on
 GitHub, and hand the PR back to a person. You never approve, request changes,
@@ -21,37 +21,48 @@ queue, and it moves only after the review is posted.
 ## 1. Find the queue
 
 ```
-gh pr list --label needs-review --state open --limit 50 \
-  --json number,title,url,baseRefName,headRefOid,isDraft,body
+gh pr list --label needs-review --state open --limit 200 \
+  --json number,title,url,baseRefName,headRefOid,isDraft,createdAt,body \
+  --jq 'sort_by(.createdAt)'
 ```
 
 The caller may pass PR numbers: review those, labelled or not. Otherwise
-review the queue oldest first. Empty queue → report `Nothing to review.` and
-stop.
+review the queue in that order, oldest first. Skip a draft (`isDraft`) and
+list it under skipped in the report: it isn't ready. Empty queue → report
+`Nothing to review.` and stop.
 
-Create the outgoing label once, idempotently:
-
-```
-gh label create agent-reviewed --color 0E8A16 --description "Reviewed by the agent reviewer" --force
-```
+Create the outgoing `agent-reviewed` label if the repo lacks it, as
+[`labels.md`](../../labels.md) shows.
 
 Then do steps 2 to 7 for each PR in turn.
 
 ## 2. Check out the PR
 
-Work in a detached worktree of your own under `$TMPDIR`, so the user's
-checkout is never switched:
+Find the remote for the repo `gh` targets, which in a fork setup is not
+`origin`: the remote whose URL contains
+`gh repo view --json nameWithOwner --jq .nameWithOwner`. Call it `<remote>`.
+
+Work in a detached worktree inside a fresh run folder of your own, so the
+user's checkout is never switched and no earlier run's leftovers get in the
+way:
 
 ```
-git fetch origin <base> "+refs/pull/<n>/head:refs/remotes/origin/pr/<n>"
-git worktree add --detach "$TMPDIR/review-pr-<n>" origin/pr/<n>
+git worktree prune
+run=$(mktemp -d "${TMPDIR:-/tmp}/review-<repo>-pr-<n>.XXXXXX")
+git fetch <remote> <base> "+refs/pull/<n>/head:refs/remotes/<remote>/pr/<n>"
+git worktree add --detach "$run/wt" <remote>/pr/<n>
 ```
 
-Call that path `<wt>` and start every later git command with `cd <wt> && `.
-The fixed point is `origin/<base>`, the diff is
-`git diff origin/<base>...HEAD`, and the commits are
-`git log origin/<base>..HEAD --oneline`. Record `git rev-parse HEAD` as
-`<sha>`. An empty diff → comment `Nothing to review: the diff is empty.`, move
+Call `$run/wt` `<wt>` and start every later git command with `cd <wt> && `.
+The fixed point is `<remote>/<base>`. Write the diff and the commits to files
+in the run folder, for the reviewers, which have no shell:
+
+```
+cd <wt> && git diff <remote>/<base>...HEAD > "$run/pr.diff"
+cd <wt> && git log <remote>/<base>..HEAD --oneline > "$run/commits.txt"
+```
+
+Record `git rev-parse HEAD` as `<sha>`. An empty diff → comment `Nothing to review: the diff is empty.`, move
 the label (step 7) and go to the next PR.
 
 **Never run the PR's code**: no install, build, test, script or hook from it.
@@ -68,7 +79,8 @@ Look in this order, and use every one that applies:
 
 1. `Intent:` or `Plan:` lines in the PR body (a feature-factory PR links its
    `plan.md` this way). Read a GitHub URL with
-   `gh api repos/<owner>/<repo>/contents/<path>?ref=<ref> -H "Accept: application/vnd.github.raw"`.
+   `gh api "repos/<owner>/<repo>/contents/<path>?ref=<ref>" -H "Accept: application/vnd.github.raw"`
+   (quote the URL: an unquoted `?` is a glob in zsh).
 2. Issue references in the body or the commits (`Closes #45`, `Fixes #12`):
    `gh issue view <n> --comments`. Linear keys (`Closes ABC-123`): read them
    through the Linear MCP tools when connected.
@@ -84,9 +96,9 @@ not what was asked.
 Every file in the checkout that documents how code is written:
 `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`,
 `docs/agents/*.md` (the **Project rules** in `docs/agents/project.md`), lint
-and formatter configs. Read them from `origin/<base>`, not from the PR head,
+and formatter configs. Read them from `<remote>/<base>`, not from the PR head,
 so a PR can't rewrite the rules it is judged by:
-`git show origin/<base>:<path>`.
+`git show <remote>/<base>:<path>`.
 
 On top of the repo's own rules, the standards axis always carries the **smell
 baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch. 3).
@@ -114,8 +126,10 @@ Each smell reads _what it is_ → _how to fix_:
 ## 5. Run the three axes in parallel
 
 Spawn three `feature-factory:reviewer` agents in one message, in the foreground,
-each with a fresh context. Give each the checkout path `<wt>`, the diff
-command, the commit list, and its axis:
+each with a fresh context. Give each the checkout path `<wt>`, the path of
+`$run/pr.diff`, the commit list from `$run/commits.txt`, and its axis. The
+reviewers have Read, Grep and Glob only: paste anything else they need, such
+as a standards file from the base branch, into the prompt.
 
 - **Standards**: the standards files from step 4 and the smell baseline
   pasted in full (the agent has no other copy). Brief: every place the diff
@@ -143,10 +157,10 @@ If an earlier review from this skill exists (its body starts with
 `**Agent review of`), read its findings and say for each whether it is fixed or
 still open.
 
-Write the review to `$TMPDIR/review-pr-<n>.json` and post it as one review:
+Write the review to `$run/review.json` and post it as one review:
 
 ```
-gh api repos/{owner}/{repo}/pulls/<n>/reviews --method POST --input "$TMPDIR/review-pr-<n>.json"
+gh api "repos/{owner}/{repo}/pulls/<n>/reviews" --method POST --input "$run/review.json"
 ```
 
 ```json
@@ -159,8 +173,13 @@ gh api repos/{owner}/{repo}/pulls/<n>/reviews --method POST --input "$TMPDIR/rev
 ```
 
 Every finding whose line is in the diff becomes an inline comment; the rest
-stay in the body only. A `422` means a line isn't in the diff: move those
-comments into the body and post once more.
+stay in the body only. Check this before posting, from the hunk headers of
+`$run/pr.diff` (`@@ -a,b +c,d @@`): a new-file line can take a comment when it
+falls in `c` to `c+d-1` of a hunk of that file, with `"side": "RIGHT"`. A
+finding marked "(deleted)" cites the old file: it can take a comment when its
+line falls in `a` to `a+b-1`, with `"side": "LEFT"`. GitHub's `422` doesn't
+say which comment it rejected, so if one still comes back, move every inline
+comment into the body and post once more.
 
 Always `COMMENT`. GitHub refuses `APPROVE` and `REQUEST_CHANGES` on your own
 PR, and the merge decision is a person's.
@@ -197,8 +216,8 @@ gh pr edit <n> --remove-label needs-review --add-label agent-reviewed
 To ask for another review after a fix, a person or agent adds `needs-review`
 back.
 
-Then `git worktree remove --force <wt>` and
-`git update-ref -d refs/remotes/origin/pr/<n>`.
+Then `git worktree remove --force <wt>`,
+`git update-ref -d refs/remotes/<remote>/pr/<n>` and `rm -rf "$run"`.
 
 ## 8. Report
 

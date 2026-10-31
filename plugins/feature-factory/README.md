@@ -65,10 +65,12 @@ For an unattended reviewer, `/schedule` a cloud routine that runs `/feature-fact
 one reviewer per repo at a time. `review` doesn't need `docs/agents/`: it works in any GitHub repo,
 and reads `docs/agents/project.md` as a standards source when it exists.
 
-**The label guard.** With feature-factory installed, a Bash call to `gh pr create` without
-`needs-review` in the command is refused, and the refusal tells the agent the fix. Any spelling
-passes: `--label needs-review`, `-l needs-review`, `--label "bug,needs-review"`. PRs opened in the
-browser, through the GitHub MCP server or with raw `gh api` aren't covered: label those by hand.
+**The label guard.** In a repo set up for the factory (it has `docs/agents/project.md`), a Bash
+call to `gh pr create` or `gh pr new` without `needs-review` as a `--label`/`-l` value is refused,
+and the refusal tells the agent the fix. The accepted spellings are listed in
+[`hooks/register.ts`](hooks/register.ts). In other repos, such as an upstream you can't label, it
+stays out of the way. PRs opened in the browser, through the GitHub MCP server or with raw `gh api`
+aren't covered: label those by hand. Both labels are defined in [`labels.md`](labels.md).
 
 ## Cross-repo work
 
@@ -108,11 +110,10 @@ person merges each PR, and its `Closes` lines move the tickets to Done. It talks
 (through your `gh` login) and Linear (through your MCP server).
 
 `review` reads PRs, their checks, linked issues and Linear tickets, and files on the base branch.
-It writes one review per PR (always `COMMENT`), creates the `agent-reviewed` label once, and swaps
-the labels. It never approves, requests changes, merges, pushes or edits a PR's code, and never
-runs a PR's code: no install, build or test from it, because a PR can come from anyone and its gate
-belongs in CI. It reads `gh pr checks` instead. PR text, commits and diffs are treated as data; an
-instruction hidden in them is reported as a finding, not followed.
+It writes one review per PR (always `COMMENT`), creates the `agent-reviewed` label if missing, and
+swaps the labels. It never approves, requests changes, merges, pushes, edits or runs a PR's code;
+the rules for untrusted PR content are in [`skills/review/SKILL.md`](skills/review/SKILL.md)
+step 2. Its reviewer subagents have no shell at all: Read, Grep and Glob only.
 
 ## Security scan
 
@@ -139,9 +140,14 @@ hidden-instruction findings (credit lines in skills were HTML comments, and post
 marked with one; both are visible text now) and `SDI-4` (this README still said the plugin ships
 no hooks).
 
-The plugin ships one hook, the label guard (`hooks/register.ts`, 22 lines): it reads each Bash
-command and refuses a `gh pr create` without `needs-review`. It makes no network calls and touches
-no files. The real risk is the one in
+The plugin ships one hook, the label guard (`hooks/register.ts`): it reads each Bash command
+and refuses a `gh pr create` without `needs-review`, in factory repos. It makes no network calls
+and reads one file's existence (`docs/agents/project.md`).
+
+**Not yet rescanned.** The scan above ran before the review fixes (`labels.md`, the guard's flag
+parsing and factory-repo check, the reviewer losing Bash). Its coverage of the guard was partial,
+too: `hooks/register.ts` was only partly inspected. Rescan with Skillspector, ideally with an
+analyzer that parses the hook, before merging. The real risk is the one in
 [What it does to your repo, GitHub and Linear](#what-it-does-to-your-repo-github-and-linear):
 `build` pushes branches, opens PRs and moves Linear tickets, and `review` posts reviews and swaps
 labels, without a person present.
