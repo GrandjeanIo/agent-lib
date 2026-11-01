@@ -121,7 +121,7 @@ swaps the labels. What it never does, and the rules for untrusted PR content, ar
 ## Security scan
 
 [NVIDIA Skillspector](https://github.com/nvidia/skillspector) v2.12.0 with the `claude_cli` LLM
-provider (4 of 4 LLM calls succeeded), run on commit `f69b9a5`. The scan covered the shipped files
+provider (4 of 4 LLM calls succeeded), run on commit `922d506`. The scan covered the shipped files
 only: the 17 tracked files under `plugins/feature-factory/`, exported to a clean folder. Only this
 section of the README changed after it.
 
