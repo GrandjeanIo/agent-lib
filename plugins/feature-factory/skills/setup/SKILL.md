@@ -4,7 +4,7 @@ description: Set up this repo for the feature factory. Checks the Linear team, l
 disable-model-invocation: true
 ---
 
-<!-- Adapted from Matt Pocock's [`setup-matt-pocock-skills`](https://github.com/mattpocock/skills) (MIT): the explore, confirm, write flow. -->
+Adapted from Matt Pocock's [`setup-matt-pocock-skills`](https://github.com/mattpocock/skills) (MIT): the explore, confirm, write flow.
 
 # Setup
 
@@ -15,7 +15,7 @@ Explore first, then work through the sections below in order. For each one, show
 and lead with your recommended answer so the user can accept it in a word. Skip a section the
 exploration already settled.
 
-Ask before changing anything in Linear, settings, git or `docs/agents/`. When something is
+Ask before changing anything in Linear, GitHub, settings, git or `docs/agents/`. When something is
 broken, propose the fix and wait; don't work around it yourself, for example by adding a project
 rule. If a file in `docs/agents/` already exists, update it in place and keep the user's edits.
 
@@ -43,6 +43,14 @@ or in another one.
 The factory needs `ready-for-agent` and a repo label, because `to-tickets` and `build` filter by
 both. Propose `repo:<repo-name>` for the repo label, even in a single-repo setup. List the labels
 the team lacks and ask whether to create them.
+
+On GitHub, the review flow needs two labels: `build` opens every PR with `needs-review`, and
+`review` moves a reviewed PR to `agent-reviewed`. Both are defined in
+[`labels.md`](../../labels.md). Check which the repo lacks with the exact-match check there,
+and ask before creating them with its command.
+
+A label the user declines goes on the open list: `build` and `review` will create it themselves
+on their first run.
 
 ## 4. States
 
@@ -125,7 +133,7 @@ Don't commit.
 Three short lists, one line per item, `—` when empty:
 
 - **Written:** each file in `docs/agents/`.
-- **Changed:** everything else you changed: Linear labels or states, settings,
+- **Changed:** everything else you changed: Linear labels or states, GitHub labels, settings,
   `.worktreeinclude`, removed worktrees and branches.
 - **Needs you:** only what the user declined or must do outside the agent, each with the one
   action that closes it.

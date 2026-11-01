@@ -4,7 +4,7 @@ description: Turn docs/intent/<slug>/intent.md into docs/intent/<slug>/plan.md â
 disable-model-invocation: true
 ---
 
-<!-- Adapted from Matt Pocock's [`to-spec`](https://github.com/mattpocock/skills) (MIT): the testing-seams step and the plan template. -->
+Adapted from Matt Pocock's [`to-spec`](https://github.com/mattpocock/skills) (MIT): the testing-seams step and the plan template.
 
 # To Plan
 
