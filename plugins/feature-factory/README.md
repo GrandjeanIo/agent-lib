@@ -47,11 +47,15 @@ For each PR it checks out the head in a detached worktree under `$TMPDIR` and ru
 - **Correctness**: concrete bugs with the input that triggers them, unsafe input reaching a sink,
   secrets, untested behaviour changes, and anything touching auth, payments or migrations.
 
-The axes are reported separately, never merged into one ranking, so a clean axis can't hide a
-failing one. Every finding is checked against the code before posting. It posts one `COMMENT`
-review: findings on diff lines become inline comments, and the body lists them all with a count
-of blocking and judgement findings. A re-review says which earlier findings are fixed and which
-are still open. Then the label moves from `needs-review` to `agent-reviewed`; if new commits
+Each reviewer holds a high bar: a finding must come from this diff, bite in a realistic case,
+and be worth the fix, rated `blocking`, `should-fix`, `nit` or `question` with a confidence. Every
+finding is checked against the code, and argued from the author's side, before posting. It posts
+one `COMMENT` review that opens with a verdict (**Ready to merge**, **Ready once the blocking items
+are fixed** or **Needs your call**) and a **Look at these first** list holding every blocking
+finding from any axis. The full list, by axis, sits folded below. Only blocking, should-fix and
+question items become inline comments. A re-review gets the earlier findings, your replies and
+the diff since: it checks the fixes, closes a finding you declined for a reason that holds, and
+doesn't raise old code it could have raised before unless it is blocking. Then the label moves from `needs-review` to `agent-reviewed`; if new commits
 landed meanwhile, the label stays so the next run reviews them. To ask for another review after a
 fix, add `needs-review` back.
 
@@ -157,6 +161,6 @@ Several skills build on [Matt Pocock's skills](https://github.com/mattpocock/ski
 | `to-tickets` | `to-tickets`: tracer-bullet slices, expand–contract for wide refactors |
 | `setup`, `templates/issue-tracker.md` | `setup-matt-pocock-skills`: explore, confirm, write flow and template shape |
 | `build`, `implementer` | Call `mattpocock-skills:tdd` and `mattpocock-skills:code-review` at runtime |
-| `review`, `reviewer` | [`code-review`](https://github.com/mattpocock/skills/tree/main/skills/engineering/code-review): parallel review axes kept separate in the report, spec and standards discovery, the sub-agent briefs, and the Fowler smell baseline, copied with light edits. Added here: a correctness axis, PR discovery by label, a read-only checkout that never runs the PR's code, standards read from the base branch, findings verified before posting, one GitHub review with inline comments, the label hand-off, and the label guard hook |
+| `review`, `reviewer` | [`code-review`](https://github.com/mattpocock/skills/tree/main/skills/engineering/code-review): parallel review axes kept separate in the full findings list, spec and standards discovery, the sub-agent briefs, and the Fowler smell baseline, copied with light edits. Added here: a correctness axis, PR discovery by label, a read-only checkout that never runs the PR's code, standards read from the base branch, findings verified before posting, one GitHub review with inline comments, the label hand-off, and the label guard hook |
 
 The adaptations are mine, and any mistakes in them are too. Matt isn't affiliated with this plugin.
